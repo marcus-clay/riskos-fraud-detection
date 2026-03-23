@@ -20,21 +20,17 @@ Filmer : produire les vidéos avec un pipeline Puppeteer + FFmpeg. Des fichiers 
 
 Raconter : rédiger le case study avec une structure narrative. Chaque vidéo est accompagnée d'une légende qui décrit la frustration utilisateur et le bénéfice apporté. Le texte cadre, les vidéos démontrent.
 
-Empaqueter : créer le repo GitHub, déployer sur Vercel, produire un fichier d'instructions autoportant qui contient tout ce qu'il faut pour intégrer le case study dans un portfolio.
+Empaqueter : créer le repo GitHub, déployer sur Vercel, produire un fichier d'intégration pour le portfolio.
 
-Publier : transmettre le fichier d'instructions à un agent IA dans le projet portfolio. L'agent implémente la page sans contexte supplémentaire.
+Publier : intégrer le case study dans le site portfolio.
 
-L'ensemble de la chaîne est assisté par un agent IA (Claude Code dans mon cas). Chaque phase a un prompt structuré. L'agent exécute, je valide et j'oriente.
+Claude Code m'a accompagné sur l'ensemble de la chaîne. L'IA est un accélérateur sur les tâches de mise en forme, de production vidéo et de structuration, mais les décisions de design, le cadrage du cas d'usage, les choix narratifs et le positionnement du case study restent les miens. L'outil amplifie le travail, il ne le remplace pas.
 
 Le résultat pour RiskOS : 7 vidéos animées en boucle (style Late Checkout Agency), un case study bilingue FR/EN, un prototype déployé, et un pack d'intégration pour mon site portfolio. Le tout en une session de travail.
 
 Le framework s'appelle Ship to Show. Il est documenté et open source.
 
-Ce qui m'intéresse dans cette approche : elle pose la question de l'industrialisation de la documentation design. Les designers produisent constamment des artefacts de qualité qui ne sont jamais montrés parce que le coût de mise en forme est trop élevé. Si un agent IA peut réduire ce coût à une session de travail, la visibilité du travail de design change d'échelle.
+Ce qui m'intéresse dans cette approche : elle pose la question de l'industrialisation de la documentation design. Les designers produisent constamment des artefacts de qualité qui ne sont jamais montrés parce que le coût de mise en forme est trop élevé. Réduire ce coût à une session de travail change la donne sur la visibilité du travail de design.
 
 Prototype : https://riskos-gulcbxw52-hugos-projects-0ac0cf31.vercel.app
 GitHub : https://github.com/marcus-clay/riskos-fraud-detection
-
----
-
-*Cible : MOFU. Pairs designers et product managers du réseau LinkedIn. Objectif : montrer le processus, pas le promouvoir. Ton pair à pair, narration fluide, pas de bullet points visuels, pas de CTA agressif.*
