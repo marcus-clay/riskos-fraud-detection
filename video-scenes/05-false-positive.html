@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared/design-tokens.css">
+  <link rel="stylesheet" href="shared/animations.css">
+  <link rel="stylesheet" href="shared/components.css">
+  <style>
+    .scene { flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+    .case-header { width: 800px; display: flex; align-items: center; gap: 12px; opacity: 0; animation: fadeSlideUp 0.5s var(--ease-out-expo) both 0.1s; }
+    .case-header h2 { font-size: var(--text-md); font-weight: 600; }
+    .case-header .meta { font-size: var(--text-xs); font-family: var(--font-mono); color: var(--text-tertiary); }
+    .main-card { width: 800px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 16px; box-shadow: var(--shadow-popup); backdrop-filter: blur(16px); overflow: hidden; opacity: 0; animation: scaleIn 0.5s var(--ease-out-expo) both 0.3s; transition: border-color 0.5s, box-shadow 0.5s; position: relative; }
+    .main-card.resolved { border-color: rgba(16,185,129,0.3); box-shadow: 0 0 40px rgba(16,185,129,0.08), var(--shadow-popup); }
+    .card-inner { display: grid; grid-template-columns: 280px 1fr; }
+    .risk-panel { padding: 24px; border-right: 1px solid var(--border-subtle); }
+    .risk-label { font-size: var(--text-xs); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-tertiary); margin-bottom: 12px; }
+    .risk-score-row { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 8px; }
+    .risk-number { font-size: 40px; font-family: var(--font-mono); font-weight: 700; letter-spacing: -0.03em; color: var(--text-primary); opacity: 0; animation: countUp 0.4s var(--ease-out-expo) both 0.8s; }
+    .risk-suffix { font-size: var(--text-md); color: var(--text-tertiary); font-weight: 400; }
+    .progress-bar { height: 6px; background: rgba(39,39,42,0.5); border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
+    .progress-fill { height: 100%; border-radius: 99px; background: var(--emerald); width: 0; animation: progressFill 0.8s var(--ease-out-expo) both 1.0s; --target-width: 45%; }
+    .comparison { padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: 8px; opacity: 0; animation: fadeIn 0.3s ease both 1.5s; }
+    .comp-header { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .comp-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; font-size: 12px; }
+    .comp-label { color: var(--text-tertiary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; width: 50px; }
+    .comp-normal { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 11px; }
+    .comp-arrow { color: var(--text-tertiary); font-size: 9px; }
+    .comp-current { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+    .insight-panel { padding: 24px; }
+    .insight-label { font-size: var(--text-xs); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-tertiary); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .scanning { display: flex; align-items: center; gap: 8px; opacity: 0; animation: fadeIn 0.2s ease both 2.0s, fadeOut 0.2s ease both 2.4s; }
+    .scan-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--purple); }
+    .scan-dot:nth-child(1) { animation: pulse 0.5s ease infinite; }
+    .scan-dot:nth-child(2) { animation: pulse 0.5s ease infinite 0.1s; }
+    .scan-dot:nth-child(3) { animation: pulse 0.5s ease infinite 0.2s; }
+    .scan-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--purple); }
+    .ai-text { font-size: 14px; line-height: 1.7; color: var(--text-secondary); opacity: 0; animation: fadeIn 0.3s ease both 2.6s; }
+    .ai-word { opacity: 0; display: inline; }
+    .ai-cursor { display: inline-block; width: 2px; height: 14px; background: var(--purple); vertical-align: text-bottom; margin-left: 2px; animation: blink 0.8s step-end infinite; }
+    .ai-cursor.hidden { opacity: 0; }
+    .confidence-row { margin-top: 14px; display: flex; align-items: center; gap: 10px; opacity: 0; animation: scaleIn 0.3s var(--ease-spring) both 5.0s; }
+    .conf-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: 99px; font-size: 10px; font-family: var(--font-mono); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+    .conf-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); }
+    .conf-cases { font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono); }
+    .action-area { margin-top: 20px; opacity: 0; animation: fadeSlideUp 0.3s var(--ease-out-expo) both 5.5s; }
+    .safe-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--emerald-light); border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--emerald); font-family: var(--font-sans); cursor: pointer; transition: all 0.3s var(--ease-out-expo); }
+    .safe-btn.clicked { background: var(--emerald); color: white; border-color: var(--emerald); }
+    .confirm-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; opacity: 0; border-radius: 16px; z-index: 10; }
+    .confirm-icon { width: 48px; height: 48px; border-radius: 50%; background: var(--emerald-light); border: 1px solid rgba(16,185,129,0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 22px; color: var(--emerald); }
+    .confirm-title { font-size: var(--text-md); font-weight: 600; margin-bottom: 4px; text-align: center; }
+    .confirm-sub { font-size: var(--text-xs); color: var(--text-tertiary); text-align: center; }
+    .confirm-time { font-family: var(--font-mono); color: var(--emerald); }
+    .cursor-ghost { opacity: 0; animation: fadeIn 0.2s ease both 5.8s, moveToSafe 0.4s var(--ease-out-expo) both 6.0s, cursorClick 0.15s ease both 6.3s, fadeOut 0.2s ease both 6.5s; }
+    @keyframes moveToSafe { from { top: 500px; left: 700px; } to { top: 478px; left: 460px; } }
+    @keyframes cursorClick { 0% { transform: scale(1); } 50% { transform: scale(0.82); } 100% { transform: scale(1); } }
+    .final-fade { position: absolute; inset: 0; background: var(--bg-base); opacity: 0; z-index: 50; animation: fadeIn 0.8s ease both 9.5s; }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <div class="case-header">
+      <span class="badge badge--green" style="animation:fadeIn 0.3s ease both 0.2s;opacity:0;">Low Risk</span>
+      <span class="meta">CASE #4519 · Jean Dujardin · Payment $450</span>
+    </div>
+    <div class="main-card" id="mainCard">
+      <div class="card-inner">
+        <div class="risk-panel">
+          <div class="risk-label">Risk Assessment</div>
+          <div class="risk-score-row">
+            <div class="risk-number">45<span class="risk-suffix">/100</span></div>
+            <span class="badge badge--green" style="opacity:0;animation:fadeIn 0.3s ease both 0.9s;">Medium</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill"></div></div>
+          <div class="comparison">
+            <div class="comp-header"><span>Normal</span><span>This txn</span></div>
+            <div class="comp-row"><span class="comp-label">Amount</span><span class="comp-normal">$320</span><span class="comp-arrow">&rarr;</span><span class="comp-current">$450</span></div>
+            <div class="comp-row"><span class="comp-label">Geo</span><span class="comp-normal">Lyon, FR</span><span class="comp-arrow">&rarr;</span><span class="comp-current">Lyon, FR</span></div>
+            <div class="comp-row"><span class="comp-label">Device</span><span class="comp-normal">MacBook Air</span><span class="comp-arrow">&rarr;</span><span class="comp-current">MacBook Air</span></div>
+          </div>
+        </div>
+        <div class="insight-panel">
+          <div class="insight-label"><span>AI Insight</span><span class="badge badge--purple">Beta</span></div>
+          <div class="scanning"><span class="scan-dot"></span><span class="scan-dot"></span><span class="scan-dot"></span><span class="scan-label">Analyzing</span></div>
+          <div class="ai-text" id="aiText">
+            <span class="ai-word">Transaction</span> <span class="ai-word">speed</span> <span class="ai-word">is</span> <span class="ai-word">slightly</span> <span class="ai-word">elevated</span> <span class="ai-word">but</span> <span class="ai-word">within</span> <span class="ai-word">acceptable</span> <span class="ai-word">range.</span> <span class="ai-word">Account</span> <span class="ai-word">history</span> <span class="ai-word">shows</span> <span class="ai-word">consistent</span> <span class="ai-word">patterns</span> <span class="ai-word">with</span> <span class="ai-word">this</span> <span class="ai-word">vendor.</span> <span class="ai-word" style="color:var(--text-primary);font-weight:500;">Recommendation:</span> <span class="ai-word" style="color:var(--emerald);font-weight:500;">mark</span> <span class="ai-word" style="color:var(--emerald);font-weight:500;">as</span> <span class="ai-word" style="color:var(--emerald);font-weight:500;">safe,</span> <span class="ai-word">no</span> <span class="ai-word">action</span> <span class="ai-word">required.</span>
+            <span class="ai-cursor" id="cursor"></span>
+          </div>
+          <div class="confidence-row">
+            <div class="conf-pill"><span class="conf-dot"></span>Confidence: <span style="color:var(--amber);font-weight:500;">72%</span></div>
+            <span class="conf-cases">Based on 2 similar cases</span>
+          </div>
+          <div class="action-area"><div class="safe-btn" id="safeBtn">&#10003; Mark as Safe</div></div>
+        </div>
+      </div>
+      <div class="confirm-overlay" id="confirmOverlay">
+        <div>
+          <div class="confirm-icon">&#10003;</div>
+          <div class="confirm-title">Case Marked Safe</div>
+          <div class="confirm-sub">Jean Dujardin · #4519 · Reviewed in <span class="confirm-time">8s</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor-ghost" style="top:500px;left:700px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M5.65 5.65l13.14 5.49-5.49 1.37-1.37 5.49z"/></svg></div>
+    <div class="final-fade"></div>
+  </div>
+  <script>
+    const words = document.querySelectorAll('.ai-word');
+    words.forEach((w, i) => { w.style.animation = 'fadeIn 0.12s ease both'; w.style.animationDelay = (2600 + i * 100) + 'ms'; });
+    setTimeout(() => document.getElementById('cursor').classList.add('hidden'), 2600 + words.length * 100 + 200);
+    setTimeout(() => { const btn = document.getElementById('safeBtn'); btn.classList.add('clicked'); btn.textContent = '\u2713 Safe'; }, 6400);
+    setTimeout(() => { document.getElementById('mainCard').classList.add('resolved'); const o = document.getElementById('confirmOverlay'); o.style.opacity = '1'; o.style.animation = 'fadeIn 0.4s var(--ease-out-expo) both'; }, 7000);
+  </script>
+</body>
+</html>

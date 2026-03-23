@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared/design-tokens.css">
+  <link rel="stylesheet" href="shared/animations.css">
+  <link rel="stylesheet" href="shared/components.css">
+  <style>
+    /* ── TIMELINE ──
+       0.0s - 1.0s : "Before" label + terminal view fades in
+       1.0s - 4.0s : Terminal visible (raw data, hard to read)
+       4.0s - 5.0s : Terminal slides left + dims, divider appears
+       5.0s - 5.5s : "After" label fades in on right
+       5.5s - 6.5s : RiskOS card slides in from right
+       6.5s - 9.5s : RiskOS card visible (same data, structured)
+       9.5s - 10.5s: Hold both sides
+      10.5s - 11.5s: Fade to black
+    */
+
+    .scene { align-items: center; justify-content: center; }
+
+    .split-container {
+      width: 1500px;
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      position: relative;
+    }
+
+    .split-label {
+      position: absolute;
+      top: -40px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-tertiary);
+    }
+    .split-label--left { left: 20px; opacity: 0; animation: fadeIn 0.3s ease both 0.3s; }
+    .split-label--right { right: 20px; opacity: 0; animation: fadeIn 0.3s ease both 5.0s; }
+
+    /* Divider */
+    .divider-line {
+      width: 1px;
+      background: var(--border-default);
+      margin: 0 24px;
+      opacity: 0;
+      animation: fadeIn 0.3s ease both 4.2s;
+      position: relative;
+    }
+    .divider-line::after {
+      content: 'vs';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--bg-base);
+      padding: 8px 6px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* BEFORE: Terminal / raw data */
+    .terminal {
+      flex: 1;
+      background: #0c0c0c;
+      border: 1px solid rgba(63,63,70,0.3);
+      border-radius: 12px;
+      overflow: hidden;
+      opacity: 0;
+      animation: fadeSlideUp 0.5s var(--ease-out-expo) both 0.5s;
+      transition: opacity 0.5s;
+    }
+    .terminal.dimmed { opacity: 0.5; }
+    .terminal-bar {
+      height: 32px;
+      background: #161616;
+      border-bottom: 1px solid rgba(63,63,70,0.3);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 6px;
+    }
+    .terminal-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .terminal-dot--r { background: #ff5f57; }
+    .terminal-dot--y { background: #ffbd2e; }
+    .terminal-dot--g { background: #28c840; }
+    .terminal-title { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); margin-left: 8px; }
+    .terminal-body {
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.8;
+      color: #6b7280;
+    }
+    .terminal-body .cmd { color: #10b981; }
+    .terminal-body .header-row { color: #52525b; }
+    .terminal-body .data-row { color: #9ca3af; }
+    .terminal-body .highlight { color: #ef4444; }
+    .terminal-body .warn { color: #f59e0b; }
+
+    /* AFTER: RiskOS card */
+    .riskos-panel {
+      flex: 1;
+      opacity: 0;
+      animation: slideInRight 0.6s var(--ease-out-expo) both 5.5s;
+    }
+    .riskos-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(12px);
+      overflow: hidden;
+    }
+    .riskos-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .riskos-header-left { display: flex; align-items: center; gap: 8px; }
+    .riskos-header-logo { color: var(--amber); font-size: 14px; }
+    .riskos-header-name { font-size: 13px; font-weight: 600; }
+    .riskos-body { padding: 20px; }
+    .riskos-case-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .riskos-score { display: flex; align-items: flex-end; gap: 4px; margin-bottom: 12px; }
+    .riskos-score-num { font-size: 36px; font-family: var(--font-mono); font-weight: 700; letter-spacing: -0.03em; }
+    .riskos-score-max { font-size: 14px; color: var(--text-tertiary); }
+    .riskos-progress { height: 5px; background: rgba(39,39,42,0.5); border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
+    .riskos-progress-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--amber), var(--red)); width: 92%; }
+    .riskos-comparison { padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: 8px; margin-bottom: 16px; }
+    .rc-header { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .rc-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
+    .rc-label { font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; width: 50px; }
+    .rc-normal { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); }
+    .rc-arrow { font-size: 9px; color: var(--text-tertiary); }
+    .rc-current { font-size: 11px; font-family: var(--font-mono); color: var(--red); font-weight: 500; }
+    .riskos-factors { display: flex; flex-direction: column; gap: 4px; }
+    .rf-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
+    .rf-left { display: flex; align-items: center; gap: 8px; }
+    .rf-icon { width: 24px; height: 24px; border-radius: 6px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-tertiary); }
+    .rf-name { font-size: 12px; color: var(--text-secondary); }
+    .rf-value { font-family: var(--font-mono); font-size: 12px; color: var(--red); }
+
+    .final-fade { position: absolute; inset: 0; background: var(--bg-base); opacity: 0; z-index: 50; animation: fadeIn 0.8s ease both 10.5s; }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <div class="split-container">
+      <span class="split-label split-label--left">Current workflow</span>
+      <span class="split-label split-label--right">With RiskOS</span>
+
+      <!-- BEFORE -->
+      <div class="terminal" id="terminal">
+        <div class="terminal-bar">
+          <span class="terminal-dot terminal-dot--r"></span>
+          <span class="terminal-dot terminal-dot--y"></span>
+          <span class="terminal-dot terminal-dot--g"></span>
+          <span class="terminal-title">fraud-alerts.csv</span>
+        </div>
+        <div class="terminal-body">
+          <div class="cmd">$ cat alerts_20260323.csv | head -20</div>
+          <br>
+          <div class="header-row">id,timestamp,user,type,amount,risk_score,ip,device,geo,velocity_ms,recipient,status</div>
+          <div class="data-row">4520,10:28:00,sarah.connor,withdrawal,<span class="highlight">12450</span>,<span class="highlight">92</span>,185.22.x.x(vpn),<span class="warn">android_unknown</span>,<span class="highlight">kyiv_ua</span>,<span class="highlight">340</span>,atm_request,open</div>
+          <div class="data-row">4518,08:30:01,ellen.ripley,transfer,<span class="highlight">24000</span>,<span class="highlight">88</span>,41.203.x.x,iphone14,<span class="highlight">lagos_ng</span>,1200,<span class="warn">new_account</span>,open</div>
+          <div class="data-row">4521,10:42:01,alex.lemaire,transfer,<span class="highlight">8900</span>,<span class="warn">78</span>,192.168.x.x,<span class="warn">iphone15pro</span>,<span class="highlight">lagos_ng</span>,<span class="highlight">142</span>,known_acct,open</div>
+          <div class="data-row">4516,06:12:00,james.bond,transfer,3200,<span class="warn">65</span>,mobile_app,<span class="warn">pixel9_new</span>,london_uk,8400,known_acct,open</div>
+          <div class="data-row">4519,09:15:00,jean.dujardin,payment,450,45,known_ip,macbook_air,lyon_fr,28000,vendor_regular,open</div>
+          <div class="data-row">4517,07:00:00,marty.mcfly,payment,120,12,known_ip,delorean_os,hill_valley,120000,vendor_regular,resolved</div>
+          <br>
+          <div class="cmd">$ # 6 alerts, 5 open, need to review each manually</div>
+          <div class="cmd">$ # No context on customer history</div>
+          <div class="cmd">$ # No AI analysis available</div>
+          <div class="cmd">$ # Average review time: 3-5 min per alert</div>
+        </div>
+      </div>
+
+      <div class="divider-line"></div>
+
+      <!-- AFTER -->
+      <div class="riskos-panel">
+        <div class="riskos-card">
+          <div class="riskos-header">
+            <div class="riskos-header-left">
+              <span class="riskos-header-logo">&#9632;</span>
+              <span class="riskos-header-name">RiskOS</span>
+              <span style="color:var(--text-tertiary);font-size:12px;">/</span>
+              <span style="color:var(--text-secondary);font-size:13px;">Case #4520</span>
+            </div>
+            <span class="badge badge--red">High Risk</span>
+          </div>
+          <div class="riskos-body">
+            <div class="riskos-case-header">
+              <span class="badge badge--amber">Suspicious Withdrawal</span>
+              <span style="font-size:11px;font-family:var(--font-mono);color:var(--text-tertiary);">Sarah Connor · 1 of 5 in queue</span>
+            </div>
+            <div class="riskos-score">
+              <span class="riskos-score-num">92</span>
+              <span class="riskos-score-max">/100</span>
+            </div>
+            <div class="riskos-progress"><div class="riskos-progress-fill"></div></div>
+            <div class="riskos-comparison">
+              <div class="rc-header"><span>Normal behavior</span><span>This transaction</span></div>
+              <div class="rc-row"><span class="rc-label">Amount</span><span class="rc-normal">$1,200</span><span class="rc-arrow">&rarr;</span><span class="rc-current">$12,450</span></div>
+              <div class="rc-row"><span class="rc-label">Geo</span><span class="rc-normal">San Francisco</span><span class="rc-arrow">&rarr;</span><span class="rc-current">Kyiv, UA</span></div>
+              <div class="rc-row"><span class="rc-label">Device</span><span class="rc-normal">MacBook Pro</span><span class="rc-arrow">&rarr;</span><span class="rc-current">Android</span></div>
+            </div>
+            <div class="riskos-factors">
+              <div class="rf-row"><div class="rf-left"><div class="rf-icon">&#9889;</div><span class="rf-name">Device Mismatch</span></div><span class="rf-value">+28</span></div>
+              <div class="rf-row"><div class="rf-left"><div class="rf-icon">&#127760;</div><span class="rf-name">IP Anomaly (VPN)</span></div><span class="rf-value">+26</span></div>
+              <div class="rf-row"><div class="rf-left"><div class="rf-icon">&#128200;</div><span class="rf-name">Amount Deviation</span></div><span class="rf-value">+22</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="final-fade"></div>
+  </div>
+  <script>
+    setTimeout(() => document.getElementById('terminal').classList.add('dimmed'), 4000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared/design-tokens.css">
+  <link rel="stylesheet" href="shared/animations.css">
+  <link rel="stylesheet" href="shared/components.css">
+  <style>
+    /* ── TIMELINE ──
+       0.0s  - 0.5s : Confirmation card #1 (Sarah Connor - Blocked)
+       0.5s  - 1.2s : "Next in queue" visible, cursor clicks
+       1.2s  - 1.8s : Transition — quick flash of case #2 header
+       1.8s  - 2.5s : Confirmation card #2 (Ellen Ripley - Escalated)
+       2.5s  - 3.2s : "Next in queue" visible, cursor clicks
+       3.2s  - 3.8s : Transition — quick flash of case #3 header
+       3.8s  - 4.5s : Confirmation card #3 (Alex Lemaire - Blocked)
+       4.5s  - 5.2s : "Next in queue" visible, cursor clicks
+       5.2s  - 5.8s : Transition — case #4 header
+       5.8s  - 6.5s : Confirmation card #4 (James Bond - Monitor)
+       6.5s  - 7.2s : "Next in queue" → last one
+       7.2s  - 7.8s : Confirmation card #5 (Jean Dujardin - Safe)
+       7.8s  - 8.5s : All cards fade out
+       8.5s  - 9.5s : Queue cleared card scales in
+       9.5s  - 11.5s: Metrics animate (counter up)
+      11.5s  - 13.0s: Hold
+      13.0s  - 14.0s: Fade to black
+    */
+
+    .scene { flex-direction: column; align-items: center; justify-content: center; }
+
+    /* Mini confirmation cards that cycle */
+    .cycle-container {
+      width: 700px;
+      height: 200px;
+      position: relative;
+    }
+
+    .mini-confirm {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px 28px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      opacity: 0;
+    }
+    .mini-confirm-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .mini-confirm-icon--red    { background: var(--red-light); border: 1px solid rgba(239,68,68,0.2); color: var(--red); }
+    .mini-confirm-icon--amber  { background: var(--amber-light); border: 1px solid rgba(245,158,11,0.2); color: var(--amber); }
+    .mini-confirm-icon--green  { background: var(--emerald-light); border: 1px solid rgba(16,185,129,0.2); color: var(--emerald); }
+
+    .mini-confirm-info { flex: 1; }
+    .mini-confirm-label { font-size: var(--text-sm); font-weight: 600; margin-bottom: 2px; }
+    .mini-confirm-sub { font-size: var(--text-xs); color: var(--text-tertiary); }
+
+    .mini-confirm-stats {
+      display: flex; gap: 20px; font-size: var(--text-xs); color: var(--text-tertiary);
+    }
+    .mini-confirm-stats .stat-value { font-family: var(--font-mono); color: var(--text-secondary); }
+
+    /* Next in queue bar */
+    .next-bar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: 10px;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .next-bar-left { display: flex; align-items: center; gap: 10px; }
+    .next-bar-label { font-size: var(--text-xs); font-family: var(--font-mono); color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; }
+    .next-bar-label span { color: var(--text-tertiary); }
+    .next-bar-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .next-bar-dot--red { background: var(--red); }
+    .next-bar-dot--amber { background: var(--amber); }
+    .next-bar-name { font-size: var(--text-sm); color: var(--text-primary); font-weight: 500; }
+    .next-bar-risk { font-size: var(--text-xs); font-family: var(--font-mono); }
+    .next-bar-risk--red { color: var(--red); }
+    .next-bar-risk--amber { color: var(--amber); }
+    .next-bar-arrow { color: var(--text-tertiary); }
+
+    /* Session progress bar */
+    .session-bar {
+      width: 700px;
+      margin-bottom: 16px;
+      opacity: 0;
+    }
+    .session-bar-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+    }
+    .session-bar-left { display: flex; align-items: center; gap: 12px; }
+    .session-bar-label { font-size: var(--text-xs); font-family: var(--font-mono); color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; }
+    .session-stat { font-size: var(--text-xs); color: var(--text-secondary); }
+    .session-stat .n { font-family: var(--font-mono); }
+    .session-stat .n--red { color: var(--red); }
+    .session-stat .n--amber { color: var(--amber); }
+    .session-stat .n--green { color: var(--emerald); }
+
+    /* Queue cleared */
+    .queue-cleared {
+      width: 700px;
+      background: rgba(16,185,129,0.03);
+      border: 1px solid rgba(16,185,129,0.15);
+      border-radius: 16px;
+      padding: 48px;
+      text-align: center;
+      opacity: 0;
+    }
+    .qc-icon {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: var(--emerald-light);
+      border: 1px solid rgba(16,185,129,0.2);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 24px; color: var(--emerald);
+    }
+    .qc-title { font-size: var(--text-lg); font-weight: 600; margin-bottom: 4px; }
+    .qc-desc { font-size: var(--text-sm); color: var(--text-tertiary); margin-bottom: 32px; }
+
+    .qc-metrics {
+      display: flex; justify-content: center; gap: 48px;
+    }
+    .qc-metric { text-align: center; }
+    .qc-metric-value {
+      font-size: 40px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 4px;
+    }
+    .qc-metric-value--green { color: var(--emerald); }
+    .qc-metric-value--white { color: var(--text-primary); }
+    .qc-metric-label {
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .qc-divider { width: 1px; background: var(--border-subtle); }
+
+    /* Final fade */
+    .final-fade {
+      position: absolute; inset: 0;
+      background: var(--bg-base);
+      opacity: 0; z-index: 50;
+      animation: fadeIn 0.8s ease both 13.0s;
+    }
+  </style>
+</head>
+<body>
+  <div class="scene">
+
+    <!-- Session progress -->
+    <div class="session-bar" id="sessionBar">
+      <div class="session-bar-inner">
+        <div class="session-bar-left">
+          <span class="session-bar-label">Session</span>
+          <span class="session-stat"><span class="n" id="reviewedCount">0</span> reviewed</span>
+          <span class="session-stat"><span class="n n--red" id="blockedCount">0</span> blocked</span>
+          <span class="session-stat"><span class="n n--amber" id="escalatedCount">0</span> escalated</span>
+          <span class="session-stat"><span class="n n--green" id="safeCount">0</span> safe</span>
+        </div>
+        <span class="session-stat" style="color:var(--text-tertiary);">avg <span class="n" id="avgTime">0</span>s/case</span>
+      </div>
+    </div>
+
+    <!-- Cycling confirmations -->
+    <div class="cycle-container" id="cycleContainer">
+      <!-- Card 1: Sarah Connor - Blocked -->
+      <div class="mini-confirm" id="card1">
+        <div class="mini-confirm-icon mini-confirm-icon--red">&#128274;</div>
+        <div class="mini-confirm-info">
+          <div class="mini-confirm-label">Account Frozen</div>
+          <div class="mini-confirm-sub">Sarah Connor · Case #4520 · Risk 92</div>
+        </div>
+        <div class="mini-confirm-stats">
+          <div><span class="stat-value">23s</span></div>
+        </div>
+      </div>
+      <!-- Card 2: Ellen Ripley - Escalated -->
+      <div class="mini-confirm" id="card2">
+        <div class="mini-confirm-icon mini-confirm-icon--amber">&#8599;</div>
+        <div class="mini-confirm-info">
+          <div class="mini-confirm-label">Escalated to Level 2</div>
+          <div class="mini-confirm-sub">Ellen Ripley · Case #4518 · Risk 88</div>
+        </div>
+        <div class="mini-confirm-stats">
+          <div><span class="stat-value">31s</span></div>
+        </div>
+      </div>
+      <!-- Card 3: Alex Lemaire - Blocked -->
+      <div class="mini-confirm" id="card3">
+        <div class="mini-confirm-icon mini-confirm-icon--red">&#128274;</div>
+        <div class="mini-confirm-info">
+          <div class="mini-confirm-label">Account Frozen</div>
+          <div class="mini-confirm-sub">Alex Lemaire · Case #4521 · Risk 78</div>
+        </div>
+        <div class="mini-confirm-stats">
+          <div><span class="stat-value">18s</span></div>
+        </div>
+      </div>
+      <!-- Card 4: James Bond - Monitor -->
+      <div class="mini-confirm" id="card4">
+        <div class="mini-confirm-icon mini-confirm-icon--amber">&#128065;</div>
+        <div class="mini-confirm-info">
+          <div class="mini-confirm-label">Monitoring Active</div>
+          <div class="mini-confirm-sub">James Bond · Case #4516 · Risk 65</div>
+        </div>
+        <div class="mini-confirm-stats">
+          <div><span class="stat-value">12s</span></div>
+        </div>
+      </div>
+      <!-- Card 5: Jean Dujardin - Safe -->
+      <div class="mini-confirm" id="card5">
+        <div class="mini-confirm-icon mini-confirm-icon--green">&#10003;</div>
+        <div class="mini-confirm-info">
+          <div class="mini-confirm-label">Case Marked Safe</div>
+          <div class="mini-confirm-sub">Jean Dujardin · Case #4519 · Risk 45</div>
+        </div>
+        <div class="mini-confirm-stats">
+          <div><span class="stat-value">8s</span></div>
+        </div>
+      </div>
+
+      <!-- Next bar -->
+      <div class="next-bar" id="nextBar">
+        <div>
+          <div class="next-bar-label">Next in queue <span id="remaining">(4 remaining)</span></div>
+          <div class="next-bar-left">
+            <div class="next-bar-dot" id="nextDot"></div>
+            <span class="next-bar-name" id="nextName"></span>
+            <span class="next-bar-risk" id="nextRisk"></span>
+          </div>
+        </div>
+        <div class="next-bar-arrow">&#8594;</div>
+      </div>
+    </div>
+
+    <!-- Queue cleared -->
+    <div class="queue-cleared" id="queueCleared">
+      <div class="qc-icon">&#127942;</div>
+      <div class="qc-title">Queue cleared</div>
+      <div class="qc-desc">All open cases have been reviewed.</div>
+      <div class="qc-metrics">
+        <div class="qc-metric">
+          <div class="qc-metric-value qc-metric-value--green" id="metricReviewed">0</div>
+          <div class="qc-metric-label">Cases reviewed</div>
+        </div>
+        <div class="qc-divider"></div>
+        <div class="qc-metric">
+          <div class="qc-metric-value qc-metric-value--white" id="metricTime">0s</div>
+          <div class="qc-metric-label">Total time</div>
+        </div>
+        <div class="qc-divider"></div>
+        <div class="qc-metric">
+          <div class="qc-metric-value qc-metric-value--white" id="metricAvg">0s</div>
+          <div class="qc-metric-label">Avg per case</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="final-fade"></div>
+  </div>
+
+  <script>
+    const cases = [
+      { id: 'card1', action: 'block',    next: 'Ellen Ripley',    nextRisk: 88, nextDot: 'red',   remaining: 4, reviewed: 1, blocked: 1, escalated: 0, safe: 0, avg: 23 },
+      { id: 'card2', action: 'escalate', next: 'Alex Lemaire',    nextRisk: 78, nextDot: 'red',   remaining: 3, reviewed: 2, blocked: 1, escalated: 1, safe: 0, avg: 27 },
+      { id: 'card3', action: 'block',    next: 'James Bond',      nextRisk: 65, nextDot: 'amber', remaining: 2, reviewed: 3, blocked: 2, escalated: 1, safe: 0, avg: 24 },
+      { id: 'card4', action: 'monitor',  next: 'Jean Dujardin',   nextRisk: 45, nextDot: 'amber', remaining: 1, reviewed: 4, blocked: 2, escalated: 1, safe: 0, avg: 21 },
+      { id: 'card5', action: 'safe',     next: null,              nextRisk: 0,  nextDot: '',      remaining: 0, reviewed: 5, blocked: 2, escalated: 1, safe: 2, avg: 18 },
+    ];
+
+    const sessionBar = document.getElementById('sessionBar');
+    const cycleContainer = document.getElementById('cycleContainer');
+    const nextBar = document.getElementById('nextBar');
+    const queueCleared = document.getElementById('queueCleared');
+
+    let t = 0;
+    const CARD_SHOW = 800;  // ms card visible
+    const NEXT_SHOW = 600;  // ms next bar visible
+    const TRANSITION = 300; // ms between
+
+    function animateValue(el, target, suffix) {
+      const duration = 800;
+      const start = performance.now();
+      const step = (now) => {
+        const p = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(target * eased) + (suffix || '');
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+
+    // Use animframe events for Puppeteer frame-by-frame control
+    window.addEventListener('animframe', (e) => {
+      t = e.detail.t;
+    });
+
+    // Fallback: also run on real time for browser preview
+    function scheduleSequence() {
+      let delay = 0;
+
+      // Show session bar
+      setTimeout(() => {
+        sessionBar.style.opacity = '1';
+        sessionBar.style.animation = 'fadeSlideDown 0.4s var(--ease-out-expo) both';
+      }, 200);
+
+      cases.forEach((c, i) => {
+        const cardStart = delay;
+
+        // Show card
+        setTimeout(() => {
+          // Hide previous
+          cases.forEach((_, j) => {
+            const el = document.getElementById(cases[j].id);
+            if (j !== i) { el.style.opacity = '0'; el.style.animation = ''; }
+          });
+          const card = document.getElementById(c.id);
+          card.style.opacity = '1';
+          card.style.animation = 'scaleIn 0.3s var(--ease-out-expo) both';
+
+          // Update session stats
+          document.getElementById('reviewedCount').textContent = c.reviewed;
+          document.getElementById('blockedCount').textContent = c.blocked;
+          document.getElementById('escalatedCount').textContent = c.escalated;
+          document.getElementById('safeCount').textContent = c.safe;
+          document.getElementById('avgTime').textContent = c.avg;
+        }, cardStart);
+
+        // Show next bar (if there is a next)
+        if (c.next) {
+          setTimeout(() => {
+            nextBar.style.opacity = '1';
+            nextBar.style.animation = 'fadeSlideUp 0.3s var(--ease-out-expo) both';
+            document.getElementById('nextName').textContent = c.next;
+            document.getElementById('nextRisk').textContent = `Risk ${c.nextRisk}`;
+            document.getElementById('nextRisk').className = `next-bar-risk next-bar-risk--${c.nextDot}`;
+            document.getElementById('nextDot').className = `next-bar-dot next-bar-dot--${c.nextDot}`;
+            document.getElementById('remaining').textContent = `(${c.remaining} remaining)`;
+          }, cardStart + CARD_SHOW);
+
+          // Hide next bar before next card
+          setTimeout(() => {
+            nextBar.style.opacity = '0';
+            nextBar.style.animation = '';
+          }, cardStart + CARD_SHOW + NEXT_SHOW);
+        }
+
+        delay += CARD_SHOW + NEXT_SHOW + TRANSITION;
+      });
+
+      // Queue cleared
+      const qcStart = delay + 200;
+      setTimeout(() => {
+        cycleContainer.style.opacity = '0';
+        cycleContainer.style.transition = 'opacity 0.3s';
+        queueCleared.style.opacity = '1';
+        queueCleared.style.animation = 'scaleIn 0.6s var(--ease-spring) both';
+      }, qcStart);
+
+      // Animate metrics
+      setTimeout(() => {
+        animateValue(document.getElementById('metricReviewed'), 5, '');
+        animateValue(document.getElementById('metricTime'), 92, 's');
+        animateValue(document.getElementById('metricAvg'), 18, 's');
+      }, qcStart + 600);
+    }
+
+    scheduleSequence();
+  </script>
+</body>
+</html>

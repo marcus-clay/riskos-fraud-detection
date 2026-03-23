@@ -1,0 +1,71 @@
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes fadeOut {
+  from { opacity: 1; } to { opacity: 0; }
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes expandWidth {
+  from { width: 0%; } to { width: 100%; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; } 50% { opacity: 0; }
+}
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position: 200% center; }
+}
+@keyframes typingCursor {
+  0%, 100% { border-right-color: var(--purple); }
+  50%      { border-right-color: transparent; }
+}
+@keyframes rotateLoader {
+  from { transform: rotate(0deg); } to { transform: rotate(360deg); }
+}
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--purple-light); }
+  50%      { box-shadow: 0 0 0 12px transparent; }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes progressFill {
+  from { width: 0; } to { width: var(--target-width, 78%); }
+}
+@keyframes drawLine {
+  from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; }
+}
+
+/* Utility classes */
+.anim-fade-in       { animation: fadeIn 0.6s var(--ease-out-expo) both; }
+.anim-fade-slide-up { animation: fadeSlideUp 0.6s var(--ease-out-expo) both; }
+.anim-slide-right   { animation: slideInRight 0.5s var(--ease-out-expo) both; }
+.anim-scale-in      { animation: scaleIn 0.5s var(--ease-out-expo) both; }
+.anim-fade-out      { animation: fadeOut 0.4s var(--ease-out-expo) both; }
+
+/* Stagger */
+.stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger > *:nth-child(2) { animation-delay: 0.12s; }
+.stagger > *:nth-child(3) { animation-delay: 0.19s; }
+.stagger > *:nth-child(4) { animation-delay: 0.26s; }
+.stagger > *:nth-child(5) { animation-delay: 0.33s; }
+.stagger > *:nth-child(6) { animation-delay: 0.40s; }

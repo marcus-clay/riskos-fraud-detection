@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared/design-tokens.css">
+  <link rel="stylesheet" href="shared/animations.css">
+  <link rel="stylesheet" href="shared/components.css">
+  <style>
+    /* ── SCENE TIMELINE ──
+       0.0s  - 0.6s : Card fades in (zoomed, centered)
+       0.6s  - 1.4s : Scanning dots animate
+       1.4s  - 5.5s : Text streams in, word by word
+       5.5s  - 6.0s : Cursor disappears, text settles
+       6.0s  - 6.8s : Highlights animate on key tokens
+       6.8s  - 7.6s : Confidence pill scales in + glow pulse
+       7.6s  - 8.4s : "Based on 7 similar cases" fades in
+       8.4s  - 9.2s : Action buttons stagger in
+       9.2s  - 10.5s: ELLIPSE — Sources light up sequentially with connection lines
+      10.5s  - 11.5s: Follow-up question appears
+      11.5s  - 12.5s: Follow-up answer streams
+      12.5s  - 13.5s: Hold
+      13.5s  - 14.5s: Fade to black
+    */
+
+    .scene { align-items: center; justify-content: center; }
+
+    .insight-card {
+      width: 920px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      box-shadow: var(--shadow-popup);
+      backdrop-filter: blur(16px);
+      overflow: hidden;
+      position: relative;
+      opacity: 0;
+      animation: scaleIn 0.6s var(--ease-out-expo) both;
+    }
+
+    /* Background glow */
+    .insight-card::before {
+      content: '';
+      position: absolute;
+      top: -50%; right: -30%;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(168,85,247,0.06), transparent 70%);
+      pointer-events: none;
+    }
+
+    .insight-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(24,24,27,0.3);
+    }
+    .insight-header-title {
+      font-size: var(--text-xs);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-tertiary);
+    }
+
+    .insight-body { padding: 24px; position: relative; z-index: 1; }
+
+    .insight-row { display: flex; gap: 16px; }
+
+    .insight-icon {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 2px;
+      font-size: 14px;
+      transition: all 0.5s var(--ease-out-expo);
+    }
+    .insight-icon--scanning {
+      background: rgba(168,85,247,0.2);
+      border: 1px solid rgba(168,85,247,0.4);
+      color: #c084fc;
+      animation: glowPulse 1.2s ease infinite;
+    }
+    .insight-icon--done {
+      background: var(--purple-light);
+      border: 1px solid rgba(168,85,247,0.2);
+      color: var(--purple);
+    }
+
+    /* Scanning dots */
+    .scanning {
+      display: flex; align-items: center; gap: 10px;
+      opacity: 0;
+      animation: fadeIn 0.3s ease both 0.6s, fadeOut 0.2s ease both 1.3s;
+    }
+    .scanning-dots { display: flex; gap: 4px; }
+    .scanning-dot {
+      width: 5px; height: 5px; border-radius: 50%; background: var(--purple);
+    }
+    .scanning-dot:nth-child(1) { animation: pulse 0.6s ease infinite; }
+    .scanning-dot:nth-child(2) { animation: pulse 0.6s ease infinite 0.15s; }
+    .scanning-dot:nth-child(3) { animation: pulse 0.6s ease infinite 0.3s; }
+    .scanning-label {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--purple);
+    }
+
+    /* Streaming text */
+    .stream-text {
+      font-size: 15px;
+      line-height: 1.75;
+      color: var(--text-secondary);
+      opacity: 0;
+      animation: fadeIn 0.3s ease both 1.5s;
+    }
+
+    .stream-word {
+      opacity: 0;
+      display: inline;
+    }
+
+    /* Highlighted tokens — start as normal text, then highlight */
+    .token-amount  { transition: color 0.4s, font-family 0.4s; }
+    .token-speed   { transition: color 0.4s, font-family 0.4s; }
+    .token-geo     { transition: color 0.4s; }
+    .token-device  { transition: color 0.4s; }
+    .token-action  { transition: color 0.4s, font-weight 0.4s; }
+
+    .token-amount.lit  { color: var(--amber); font-family: var(--font-mono); font-size: 13px; }
+    .token-speed.lit   { color: var(--red); font-family: var(--font-mono); font-size: 13px; }
+    .token-geo.lit     { color: var(--red); }
+    .token-device.lit  { color: #fcd34d; }
+    .token-action.lit  { color: var(--text-primary); font-weight: 500; }
+
+    /* AI cursor */
+    .ai-cursor {
+      display: inline-block;
+      width: 2px; height: 16px;
+      background: var(--purple);
+      vertical-align: text-bottom;
+      margin-left: 2px;
+      animation: blink 0.8s step-end infinite;
+    }
+    .ai-cursor.hidden { opacity: 0; }
+
+    /* Confidence */
+    .confidence-area {
+      margin-top: 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .confidence-pill {
+      opacity: 0;
+      animation: scaleIn 0.4s var(--ease-spring) both;
+      animation-delay: 6.8s;
+    }
+    .similar-cases {
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+      font-family: var(--font-mono);
+      opacity: 0;
+      animation: fadeIn 0.3s ease both 7.6s;
+    }
+
+    /* Action buttons */
+    .actions {
+      margin-top: 20px;
+      display: flex; gap: 8px;
+    }
+    .actions .btn {
+      opacity: 0;
+      animation: scaleIn 0.3s var(--ease-spring) both;
+    }
+    .actions .btn:nth-child(1) { animation-delay: 8.4s; }
+    .actions .btn:nth-child(2) { animation-delay: 8.6s; }
+    .actions .btn:nth-child(3) { animation-delay: 8.8s; }
+
+    /* ── ELLIPSE: CONNECTED SOURCES ── */
+    .sources-bar {
+      margin-top: 20px;
+      display: flex; align-items: center; gap: 12px;
+      opacity: 0;
+      animation: fadeSlideUp 0.4s var(--ease-out-expo) both;
+      animation-delay: 9.2s;
+    }
+    .sources-label {
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .source-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+      opacity: 0;
+      transition: all 0.5s var(--ease-out-expo);
+    }
+    .source-chip.lit {
+      opacity: 1;
+      border-color: var(--border-strong);
+    }
+    .source-chip .source-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--text-tertiary);
+      transition: background 0.4s, box-shadow 0.4s;
+    }
+    .source-chip.lit .source-dot {
+      background: var(--emerald);
+      box-shadow: 0 0 6px rgba(16,185,129,0.4);
+    }
+    .source-icon { font-size: 10px; }
+    .source-icon--blue { color: #60a5fa; }
+    .source-icon--amber { color: var(--amber); }
+    .source-icon--green { color: var(--emerald); }
+
+    /* Latency tooltip */
+    .source-chip .latency {
+      font-family: var(--font-mono);
+      color: var(--emerald);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .source-chip.lit .latency { opacity: 1; }
+
+    /* ── FOLLOW-UP ── */
+    .followup {
+      margin-top: 16px;
+      opacity: 0;
+      animation: fadeSlideUp 0.3s var(--ease-out-expo) both;
+      animation-delay: 10.5s;
+    }
+    .followup-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: var(--text-xs); font-family: var(--font-mono);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--purple); cursor: pointer;
+      padding: 0; border: none; background: none;
+    }
+    .followup-answer {
+      margin-top: 10px;
+      display: flex; gap: 8px; align-items: flex-start;
+      opacity: 0;
+      animation: fadeSlideUp 0.3s var(--ease-out-expo) both;
+      animation-delay: 11.0s;
+    }
+    .followup-icon {
+      width: 16px; height: 16px; border-radius: 4px;
+      background: var(--purple-light); border: 1px solid rgba(168,85,247,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 8px; color: var(--purple); flex-shrink: 0; margin-top: 2px;
+    }
+    .followup-text {
+      font-size: 12px; line-height: 1.6; color: var(--text-tertiary);
+    }
+    .followup-text .token-device.lit { color: #fcd34d; }
+
+    /* Final fade */
+    .final-fade {
+      position: absolute; inset: 0;
+      background: var(--bg-base);
+      opacity: 0; z-index: 50;
+      animation: fadeIn 0.8s ease both 13.5s;
+    }
+  </style>
+</head>
+<body>
+  <div class="scene">
+
+    <div class="insight-card">
+      <div class="insight-header">
+        <span class="insight-header-title">AI Insight</span>
+        <span class="badge badge--purple">Beta</span>
+      </div>
+      <div class="insight-body">
+        <div class="insight-row">
+          <div class="insight-icon insight-icon--scanning" id="icon">&#9889;</div>
+          <div style="flex:1;">
+
+            <!-- Scanning phase -->
+            <div class="scanning">
+              <div class="scanning-dots">
+                <span class="scanning-dot"></span>
+                <span class="scanning-dot"></span>
+                <span class="scanning-dot"></span>
+              </div>
+              <span class="scanning-label">Analyzing case data</span>
+            </div>
+
+            <!-- Streamed text -->
+            <div class="stream-text" id="stream">
+              <span class="stream-word">Scanning</span>
+              <span class="stream-word">device</span>
+              <span class="stream-word">fingerprint...</span>
+              <span class="stream-word token-device" data-token="device">Device</span>
+              <span class="stream-word token-device" data-token="device">not</span>
+              <span class="stream-word token-device" data-token="device">recognized.</span>
+              <span class="stream-word">Last</span>
+              <span class="stream-word">known</span>
+              <span class="stream-word">device:</span>
+              <span class="stream-word token-device" data-token="device">MacBook</span>
+              <span class="stream-word token-device" data-token="device">Pro,</span>
+              <span class="stream-word">San</span>
+              <span class="stream-word">Francisco.</span>
+              <span class="stream-word">Current</span>
+              <span class="stream-word">session</span>
+              <span class="stream-word">originates</span>
+              <span class="stream-word">from</span>
+              <span class="stream-word">unregistered</span>
+              <span class="stream-word token-device" data-token="device">Android</span>
+              <span class="stream-word">device</span>
+              <span class="stream-word">in</span>
+              <span class="stream-word token-geo" data-token="geo">Kyiv,</span>
+              <span class="stream-word token-geo" data-token="geo">Ukraine.</span>
+              <span class="stream-word">Recommendation:</span>
+              <span class="stream-word token-action" data-token="action">immediate</span>
+              <span class="stream-word token-action" data-token="action">card</span>
+              <span class="stream-word token-action" data-token="action">freeze</span>
+              <span class="stream-word">and</span>
+              <span class="stream-word">identity</span>
+              <span class="stream-word">verification</span>
+              <span class="stream-word">call.</span>
+              <span class="ai-cursor" id="cursor"></span>
+            </div>
+
+            <!-- Confidence -->
+            <div class="confidence-area">
+              <div class="confidence-pill">
+                <span class="confidence-pill__dot confidence-pill__dot--high"></span>
+                Confidence: <span style="color:var(--emerald);font-weight:500;">94%</span>
+              </div>
+              <span class="similar-cases">Based on 7 similar cases</span>
+            </div>
+
+            <!-- Actions -->
+            <div class="actions">
+              <div class="btn btn--danger">&#128274; Block Card</div>
+              <div class="btn btn--secondary">&#8599; Escalate</div>
+              <div class="btn btn--secondary">&#128065; Monitor Only</div>
+            </div>
+
+            <!-- Sources ellipse -->
+            <div class="sources-bar">
+              <span class="sources-label">Sources:</span>
+              <div class="source-chip" id="src1">
+                <span class="source-icon source-icon--blue">&#128451;</span>
+                Core Banking API
+                <span class="source-dot"></span>
+                <span class="latency">12ms</span>
+              </div>
+              <div class="source-chip" id="src2">
+                <span class="source-icon source-icon--amber">&#128246;</span>
+                Device Fingerprint
+                <span class="source-dot"></span>
+                <span class="latency">8ms</span>
+              </div>
+              <div class="source-chip" id="src3">
+                <span class="source-icon source-icon--green">&#127760;</span>
+                Geo Intelligence
+                <span class="source-dot"></span>
+                <span class="latency">23ms</span>
+              </div>
+            </div>
+
+            <!-- Follow-up -->
+            <div class="followup">
+              <div class="followup-btn">&#128172; Ask for more context</div>
+              <div class="followup-answer">
+                <div class="followup-icon">&#9889;</div>
+                <div class="followup-text">The <span class="token-device lit">Android</span> device IMEI matches a batch associated with SIM-swap fraud in Eastern Europe. Recommend mandatory 2FA reset.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="final-fade"></div>
+  </div>
+
+  <script>
+    // Word-by-word streaming
+    const words = document.querySelectorAll('.stream-word');
+    const cursor = document.getElementById('cursor');
+    const icon = document.getElementById('icon');
+    const startTime = 1500; // ms
+    const wordInterval = 120; // ms per word
+
+    words.forEach((w, i) => {
+      w.style.animationDelay = `${startTime + i * wordInterval}ms`;
+      w.style.animation = `fadeIn 0.15s ease both`;
+    });
+
+    // After all words done, hide cursor and light tokens
+    const allWordsTime = startTime + words.length * wordInterval;
+
+    // Hide cursor
+    setTimeout(() => {
+      cursor.classList.add('hidden');
+      icon.className = 'insight-icon insight-icon--done';
+    }, allWordsTime + 300);
+
+    // Light up tokens at 6.0s
+    setTimeout(() => {
+      document.querySelectorAll('[data-token]').forEach(el => el.classList.add('lit'));
+    }, 6000);
+
+    // Light up sources sequentially at 9.5s
+    setTimeout(() => document.getElementById('src1').classList.add('lit'), 9500);
+    setTimeout(() => document.getElementById('src2').classList.add('lit'), 9800);
+    setTimeout(() => document.getElementById('src3').classList.add('lit'), 10100);
+  </script>
+</body>
+</html>

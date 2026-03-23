@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared/design-tokens.css">
+  <link rel="stylesheet" href="shared/animations.css">
+  <link rel="stylesheet" href="shared/components.css">
+  <style>
+    /* ── TIMELINE ──
+       0.0s  - 0.5s : Action buttons visible, cursor moves to "Block Card"
+       0.5s  - 0.8s : Click on Block Card
+       0.8s  - 1.5s : Buttons fade out, confirmation fades in
+       1.5s  - 3.0s : Confirmation view (icon + label + summary grid)
+       3.0s  - 4.0s : Export button animates (idle > spinner > check)
+       4.0s  - 5.5s : ELLIPSE 1 — Slack preview slides in from bottom
+       5.5s  - 7.5s : Slack message content visible
+       7.5s  - 8.5s : Slack fades slightly, SMS mockup slides in from right
+       8.5s  - 10.5s: SMS visible (card blocked notification)
+       10.5s - 12.0s: Both ellipses visible, hold
+       12.0s - 13.0s: "Next in queue" card fades in below
+       13.0s - 14.0s: Hold
+       14.0s - 15.0s: Fade to black
+    */
+
+    .scene { flex-direction: column; gap: 0; }
+
+    /* Main layout */
+    .decision-layout {
+      display: flex;
+      align-items: flex-start;
+      gap: 32px;
+      width: 1400px;
+    }
+
+    /* Left: confirmation */
+    .confirm-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    /* Phase: action buttons (pre-click) */
+    .pre-click {
+      display: flex; gap: 10px;
+      opacity: 0;
+      animation: fadeIn 0.3s ease both 0s, fadeOut 0.3s ease both 0.8s;
+    }
+    .pre-click .btn--danger {
+      animation: glowPulse 1.5s ease infinite;
+    }
+
+    /* Cursor */
+    .cursor-ghost {
+      opacity: 0;
+      animation:
+        fadeIn 0.2s ease both 0.1s,
+        moveToDanger 0.4s var(--ease-out-expo) both 0.2s,
+        cursorClick 0.15s ease both 0.6s,
+        fadeOut 0.2s ease both 0.85s;
+    }
+    @keyframes moveToDanger {
+      from { top: 520px; left: 700px; }
+      to   { top: 508px; left: 590px; }
+    }
+    @keyframes cursorClick {
+      0% { transform: scale(1); } 50% { transform: scale(0.82); } 100% { transform: scale(1); }
+    }
+
+    /* Confirmation card */
+    .confirm-card {
+      width: 600px;
+      text-align: center;
+      opacity: 0;
+      animation: scaleIn 0.6s var(--ease-out-expo) both;
+      animation-delay: 1.2s;
+    }
+
+    .confirm-icon {
+      width: 64px; height: 64px;
+      border-radius: 16px;
+      background: var(--red-light);
+      border: 1px solid rgba(239,68,68,0.2);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 28px; color: var(--red);
+    }
+    .confirm-title {
+      font-size: var(--text-lg); font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .confirm-desc {
+      font-size: var(--text-sm); color: var(--text-tertiary);
+      margin-bottom: 24px;
+    }
+
+    /* Summary grid */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      padding: 20px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      text-align: center;
+      opacity: 0;
+      animation: fadeSlideUp 0.4s var(--ease-out-expo) both;
+      animation-delay: 1.8s;
+    }
+    .summary-grid .label {
+      font-size: var(--text-xs); color: var(--text-tertiary);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    .summary-grid .value {
+      font-size: var(--text-sm); color: var(--text-primary);
+    }
+    .summary-grid .value--mono { font-family: var(--font-mono); }
+    .summary-grid .value--red { color: var(--red); font-weight: 500; }
+
+    /* Export button states */
+    .export-bar {
+      display: flex; gap: 8px;
+      opacity: 0;
+      animation: fadeIn 0.3s ease both 2.5s;
+    }
+    .export-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      background: var(--bg-elevated); border: 1px solid var(--border-default);
+      border-radius: 6px; font-size: var(--text-xs); color: var(--text-secondary);
+    }
+    .export-btn .spinner-mini {
+      width: 10px; height: 10px;
+      border: 1.5px solid var(--border-default);
+      border-top-color: var(--text-secondary);
+      border-radius: 50%;
+      animation: rotateLoader 0.7s linear infinite;
+      display: none;
+    }
+    .export-btn .check-icon { display: none; color: var(--emerald); }
+
+    /* Ticket badge */
+    .ticket-badge {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      background: var(--bg-elevated);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 6px;
+      font-size: var(--text-xs); color: var(--red);
+      opacity: 0;
+      animation: fadeIn 0.3s ease both 2.8s;
+    }
+
+    /* Right: ellipses */
+    .ellipses {
+      width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ELLIPSE 1: Slack */
+    .slack-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      overflow: hidden;
+      opacity: 0;
+      animation: slideInRight 0.5s var(--ease-out-expo) both;
+      animation-delay: 4.0s;
+    }
+    .slack-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(24,24,27,0.3);
+    }
+    .slack-icon-box {
+      width: 18px; height: 18px; border-radius: 4px;
+      background: #4A154B;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 9px; font-weight: 700;
+    }
+    .slack-header-text { font-size: var(--text-xs); color: var(--text-secondary); }
+    .slack-check { color: var(--emerald); font-size: 10px; margin-left: auto; }
+    .slack-time { font-size: var(--text-xs); color: var(--text-tertiary); font-family: var(--font-mono); }
+    .slack-body { padding: 12px 16px; }
+    .slack-msg-row { display: flex; gap: 10px; align-items: flex-start; }
+    .slack-bot-avatar {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: var(--amber-light); border: 1px solid rgba(245,158,11,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: var(--amber); flex-shrink: 0;
+    }
+    .slack-msg-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .slack-msg-name { font-size: 12px; color: var(--text-primary); font-weight: 500; }
+    .slack-msg-time { font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono); }
+    .slack-msg-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+    .slack-msg-text .hl-amber { color: var(--amber); font-weight: 500; }
+    .slack-msg-text .hl-red { color: var(--red); font-family: var(--font-mono); font-size: 11px; }
+    .slack-quote {
+      margin-top: 8px; padding-left: 10px;
+      border-left: 2px solid var(--border-default);
+      font-size: 11px; color: var(--text-tertiary); font-style: italic;
+      line-height: 1.5;
+    }
+
+    /* ELLIPSE 2: SMS / Phone notification */
+    .sms-card {
+      width: 340px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      overflow: hidden;
+      opacity: 0;
+      animation: slideInRight 0.5s var(--ease-out-expo) both;
+      animation-delay: 7.5s;
+    }
+    .sms-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(24,24,27,0.3);
+    }
+    .sms-icon-box {
+      width: 18px; height: 18px; border-radius: 4px;
+      background: var(--emerald-light);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--emerald); font-size: 10px;
+    }
+    .sms-header-text { font-size: var(--text-xs); color: var(--text-secondary); }
+    .sms-body { padding: 16px; }
+    .sms-bubble {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 12px 12px 12px 4px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .sms-bubble strong { color: var(--text-primary); font-weight: 500; }
+    .sms-meta {
+      margin-top: 8px;
+      font-size: 10px;
+      color: var(--text-tertiary);
+      font-family: var(--font-mono);
+    }
+
+    /* Next in queue */
+    .next-queue {
+      width: 600px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      opacity: 0;
+      animation: fadeSlideUp 0.4s var(--ease-out-expo) both;
+      animation-delay: 12.0s;
+    }
+    .next-label {
+      font-size: var(--text-xs); color: var(--text-tertiary);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      font-family: var(--font-mono);
+      margin-bottom: 6px;
+    }
+    .next-label span { color: var(--text-tertiary); }
+    .next-info { display: flex; align-items: center; gap: 10px; }
+    .next-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+    .next-name { color: var(--text-primary); font-weight: 500; font-size: var(--text-sm); }
+    .next-id { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-tertiary); }
+    .next-risk { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--red); }
+    .next-arrow { color: var(--text-tertiary); font-size: 16px; }
+
+    /* Final fade */
+    .final-fade {
+      position: absolute; inset: 0;
+      background: var(--bg-base);
+      opacity: 0; z-index: 50;
+      animation: fadeIn 0.8s ease both 14.0s;
+    }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <div class="decision-layout">
+
+      <!-- LEFT: Confirmation flow -->
+      <div class="confirm-panel">
+        <!-- Pre-click buttons -->
+        <div class="pre-click">
+          <div class="btn btn--danger" style="font-size:13px;">&#128274; Block Card</div>
+          <div class="btn btn--secondary" style="font-size:13px;">&#8599; Escalate</div>
+          <div class="btn btn--secondary" style="font-size:13px;">&#128065; Monitor Only</div>
+        </div>
+
+        <!-- Confirmation -->
+        <div class="confirm-card">
+          <div class="confirm-icon">&#128274;</div>
+          <div class="confirm-title">Account Frozen</div>
+          <div class="confirm-desc">Card blocked and customer notification sent via SMS and email.</div>
+        </div>
+
+        <div class="summary-grid">
+          <div><div class="label">Case</div><div class="value value--mono">#4520</div></div>
+          <div><div class="label">User</div><div class="value">Sarah Connor</div></div>
+          <div><div class="label">Action</div><div class="value value--red">Block</div></div>
+          <div><div class="label">Reviewed in</div><div class="value value--mono">23s</div></div>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div class="export-bar">
+            <div class="export-btn" id="exportBtn">
+              <span class="spinner-mini" id="exportSpinner"></span>
+              <span id="exportIcon">&#128196;</span>
+              <span class="check-icon" id="exportCheck">&#10003;</span>
+              <span id="exportLabel">Export Report</span>
+            </div>
+          </div>
+          <div class="ticket-badge">&#128196; Ticket FRAUD-1220 created</div>
+        </div>
+
+        <!-- Next in queue -->
+        <div class="next-queue">
+          <div>
+            <div class="next-label">Next in queue <span>(3 remaining)</span></div>
+            <div class="next-info">
+              <div class="next-dot"></div>
+              <span class="next-name">Ellen Ripley</span>
+              <span class="next-id">#4518</span>
+              <span class="next-risk">Risk 88</span>
+            </div>
+          </div>
+          <div class="next-arrow">&#8594;</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Ellipses -->
+      <div class="ellipses">
+        <!-- Slack -->
+        <div class="slack-card">
+          <div class="slack-header">
+            <div class="slack-icon-box">S</div>
+            <span class="slack-header-text">Sent to #fraud-ops</span>
+            <span class="slack-check">&#10003;</span>
+            <span class="slack-time">just now</span>
+          </div>
+          <div class="slack-body">
+            <div class="slack-msg-row">
+              <div class="slack-bot-avatar">&#9632;</div>
+              <div>
+                <div class="slack-msg-meta">
+                  <span class="slack-msg-name">RiskOS Bot</span>
+                  <span class="slack-msg-time">10:43 AM</span>
+                </div>
+                <div class="slack-msg-text">
+                  <span class="hl-amber">Account Frozen</span> Case #4520 (Sarah Connor). Risk score: <span class="hl-red">92/100</span>.
+                </div>
+                <div class="slack-quote">Device not recognized. Session from Android device in Kyiv, Ukraine. Card blocked per analyst decision.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SMS -->
+        <div class="sms-card">
+          <div class="sms-header">
+            <div class="sms-icon-box">&#128241;</div>
+            <span class="sms-header-text">Customer notification sent</span>
+          </div>
+          <div class="sms-body">
+            <div class="sms-bubble">
+              <strong>Security Alert</strong><br>
+              Your card ending in **4520 has been temporarily frozen due to unusual activity. If this was you, call us at 1-800-SECURE to restore access. Your funds are safe.
+            </div>
+            <div class="sms-meta">Delivered to +33 6 •• •• 42 · 10:43 AM</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Cursor -->
+    <div class="cursor-ghost" style="top:520px;left:700px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M5.65 5.65l13.14 5.49-5.49 1.37-1.37 5.49z"/></svg>
+    </div>
+
+    <div class="final-fade"></div>
+  </div>
+
+  <script>
+    // Export button animation: idle > spinner > check
+    setTimeout(() => {
+      document.getElementById('exportIcon').style.display = 'none';
+      document.getElementById('exportSpinner').style.display = 'block';
+      document.getElementById('exportLabel').textContent = 'Generating PDF...';
+    }, 3000);
+    setTimeout(() => {
+      document.getElementById('exportSpinner').style.display = 'none';
+      document.getElementById('exportCheck').style.display = 'inline';
+      document.getElementById('exportLabel').textContent = 'Report saved';
+      document.getElementById('exportBtn').style.borderColor = 'rgba(16,185,129,0.3)';
+      document.getElementById('exportBtn').style.color = '#10b981';
+    }, 3800);
+  </script>
+</body>
+</html>

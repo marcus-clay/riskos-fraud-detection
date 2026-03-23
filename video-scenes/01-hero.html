@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared/design-tokens.css">
+  <link rel="stylesheet" href="shared/animations.css">
+  <link rel="stylesheet" href="shared/components.css">
+  <style>
+    /* ── SCENE TIMELINE ──
+       0.0s  - 1.0s : Fade in interface (inbox view)
+       1.0s  - 3.0s : Inbox visible, cursor appears
+       3.0s  - 3.5s : Cursor moves to case #4520 (risk 92)
+       3.5s  - 4.0s : Row highlights on hover
+       4.0s  - 4.3s : Click effect
+       4.3s  - 5.0s : Inbox fades out
+       5.0s  - 5.8s : Case detail fades in
+       5.8s  - 8.0s : Risk score animates, factors appear
+       8.0s  - 10.0s: AI insight starts streaming
+      10.0s  - 11.5s: Confidence appears
+      11.5s  - 13.0s: Action buttons appear
+      13.0s  - 14.5s: Hold
+      14.5s  - 16.0s: Fade to black
+    */
+
+    /* Phases - stacked via absolute positioning */
+    .phase-inbox, .phase-detail {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+    }
+    .phase-inbox {
+      z-index: 2;
+      animation: fadeIn 0.8s var(--ease-out-expo) both, fadeOut 0.5s var(--ease-out-expo) both 4.3s;
+    }
+    .phase-detail {
+      z-index: 1;
+      opacity: 0;
+      animation: fadeSlideUp 0.7s var(--ease-out-expo) both;
+      animation-delay: 5.0s;
+    }
+
+    /* Layout */
+    .app-container {
+      width: 1440px;
+      height: 820px;
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+      box-shadow: var(--shadow-popup);
+      background: var(--bg-base);
+      position: relative;
+    }
+
+    /* ── INBOX ── */
+    .inbox { padding: 32px; }
+    .inbox-header {
+      margin-bottom: 24px;
+      animation: fadeSlideUp 0.5s var(--ease-out-expo) both;
+      animation-delay: 0.3s;
+    }
+    .inbox-header h1 {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .inbox-header p {
+      font-size: var(--text-sm);
+      color: var(--text-tertiary);
+    }
+    .inbox-header p span { color: var(--text-secondary); font-weight: 500; }
+
+    .inbox-table {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .inbox-table-header {
+      display: grid;
+      grid-template-columns: 60px 80px 1fr 120px 100px 100px;
+      padding: 8px 16px;
+      background: rgba(24,24,27,0.5);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: var(--text-xs);
+      font-family: var(--font-mono);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .inbox-row {
+      display: grid;
+      grid-template-columns: 60px 80px 1fr 120px 100px 100px;
+      padding: 10px 16px;
+      align-items: center;
+      border-bottom: 1px solid rgba(39,39,42,0.3);
+      font-size: var(--text-sm);
+      transition: background 0.2s;
+    }
+    .inbox-row.stagger-item {
+      opacity: 0;
+      animation: fadeSlideUp 0.4s var(--ease-out-expo) both;
+    }
+    .inbox-row:nth-child(1) { animation-delay: 0.6s; }
+    .inbox-row:nth-child(2) { animation-delay: 0.7s; }
+    .inbox-row:nth-child(3) { animation-delay: 0.8s; }
+    .inbox-row:nth-child(4) { animation-delay: 0.9s; }
+    .inbox-row:nth-child(5) { animation-delay: 1.0s; }
+
+    .inbox-row.highlighted {
+      background: var(--bg-hover);
+      animation: none;
+      opacity: 1;
+    }
+
+    .risk-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+    .risk-dot--high { background: var(--red); }
+    .risk-dot--med  { background: var(--amber); }
+    .risk-dot--low  { background: var(--emerald); }
+
+    .risk-num { font-family: var(--font-mono); font-size: var(--text-xs); }
+    .risk-num--high { color: var(--red); }
+
+    .user-name { color: var(--text-primary); font-weight: 500; }
+    .case-id { font-family: var(--font-mono); color: var(--text-tertiary); }
+    .amount { font-family: var(--font-mono); color: var(--text-secondary); text-align: right; }
+    .time { font-size: var(--text-xs); color: var(--text-tertiary); text-align: right; }
+
+    /* ── CURSOR ── */
+    .cursor-ghost {
+      opacity: 0;
+      animation:
+        fadeIn 0.3s var(--ease-out-expo) both 2.5s,
+        moveCursorToRow 0.6s var(--ease-out-expo) both 3.0s,
+        cursorClick 0.2s ease both 4.0s;
+    }
+    @keyframes moveCursorToRow {
+      from { top: 300px; left: 900px; }
+      to   { top: 235px; left: 600px; }
+    }
+    @keyframes cursorClick {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(0.85); }
+      100% { transform: scale(1); }
+    }
+
+    /* ── DETAIL VIEW ── */
+    .detail-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 20px;
+      padding: 24px 32px;
+    }
+    .detail-left { display: flex; flex-direction: column; gap: 16px; }
+    .detail-right { display: flex; flex-direction: column; gap: 16px; }
+
+    /* Risk score animation */
+    .score-number {
+      font-size: var(--text-2xl);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      opacity: 0;
+      animation: countUp 0.5s var(--ease-out-expo) both;
+      animation-delay: 5.8s;
+    }
+    .score-suffix { font-size: var(--text-md); color: var(--text-tertiary); font-weight: 400; font-family: var(--font-sans); }
+
+    .progress-bar__fill {
+      width: 0;
+      animation: progressFill 1s var(--ease-out-expo) both;
+      animation-delay: 6.2s;
+      --target-width: 92%;
+    }
+
+    /* Factors stagger */
+    .factor-row {
+      opacity: 0;
+      animation: fadeSlideUp 0.4s var(--ease-out-expo) both;
+    }
+    .factor-row:nth-child(1) { animation-delay: 6.5s; }
+    .factor-row:nth-child(2) { animation-delay: 6.65s; }
+    .factor-row:nth-child(3) { animation-delay: 6.8s; }
+    .factor-row:nth-child(4) { animation-delay: 6.95s; }
+
+    /* AI insight streaming */
+    .ai-scanning {
+      opacity: 0;
+      animation: fadeIn 0.3s var(--ease-out-expo) both 8.0s, fadeOut 0.3s ease both 8.8s;
+    }
+    .ai-text {
+      opacity: 0;
+      animation: fadeIn 0.3s ease both 9.0s;
+    }
+    .ai-text .line {
+      opacity: 0;
+    }
+    .ai-text .line:nth-child(1) { animation: fadeIn 0.3s ease both; animation-delay: 9.0s; }
+    .ai-text .line:nth-child(2) { animation: fadeIn 0.3s ease both; animation-delay: 9.5s; }
+    .ai-text .line:nth-child(3) { animation: fadeIn 0.3s ease both; animation-delay: 10.0s; }
+
+    .confidence-pill {
+      opacity: 0;
+      animation: scaleIn 0.4s var(--ease-spring) both;
+      animation-delay: 10.5s;
+    }
+
+    .action-buttons {
+      opacity: 0;
+      animation: fadeSlideUp 0.4s var(--ease-out-expo) both;
+      animation-delay: 11.5s;
+    }
+    .action-buttons .btn {
+      opacity: 0;
+      animation: scaleIn 0.3s var(--ease-spring) both;
+    }
+    .action-buttons .btn:nth-child(1) { animation-delay: 11.5s; }
+    .action-buttons .btn:nth-child(2) { animation-delay: 11.7s; }
+    .action-buttons .btn:nth-child(3) { animation-delay: 11.9s; }
+
+    /* Final fade */
+    .final-fade {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-base);
+      opacity: 0;
+      animation: fadeIn 1s ease both;
+      animation-delay: 14.5s;
+      z-index: 50;
+    }
+
+    /* Comparison */
+    .comparison {
+      opacity: 0;
+      animation: fadeSlideUp 0.4s var(--ease-out-expo) both;
+      animation-delay: 7.2s;
+    }
+
+    /* Detail header */
+    .detail-header {
+      opacity: 0;
+      animation: fadeSlideUp 0.5s var(--ease-out-expo) both;
+      animation-delay: 5.2s;
+      padding: 0 32px;
+      margin-bottom: 8px;
+    }
+    .detail-header h1 {
+      font-size: var(--text-md);
+      font-weight: 600;
+    }
+    .detail-header .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <!-- Navbar -->
+    <div class="navbar" style="animation: fadeIn 0.5s var(--ease-out-expo) both;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="color:var(--amber);font-size:16px;">&#9632;</span>
+        <span style="font-weight:600;font-size:var(--text-base);color:var(--text-primary);">RiskOS</span>
+        <span style="color:var(--text-tertiary);margin:0 4px;">/</span>
+        <span style="color:var(--text-secondary);font-size:var(--text-sm);" id="nav-breadcrumb">Inbox</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:var(--text-xs);font-family:var(--font-mono);color:var(--text-tertiary);background:var(--bg-elevated);padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">5 open</span>
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--emerald);"></span>
+        <span style="font-size:var(--text-xs);color:var(--text-tertiary);">System Operational</span>
+      </div>
+    </div>
+
+    <div class="app-container" style="margin-top:56px;">
+
+      <!-- PHASE 1: INBOX -->
+      <div class="phase-inbox" id="inbox-phase">
+        <div class="inbox">
+          <div class="inbox-header">
+            <h1>Inbox</h1>
+            <p>You have <span>5 open</span> cases requiring attention.</p>
+          </div>
+          <div class="inbox-table">
+            <div class="inbox-table-header">
+              <div>Risk</div><div>Case ID</div><div>User</div><div>Type</div><div>Amount</div><div>Time</div>
+            </div>
+            <div class="inbox-row stagger-item">
+              <div><span class="risk-dot risk-dot--high"></span><span class="risk-num risk-num--high">92</span></div>
+              <div class="case-id">#4520</div>
+              <div class="user-name">Sarah Connor</div>
+              <div><span class="badge badge--amber">Withdrawal</span></div>
+              <div class="amount">$12,450</div>
+              <div class="time">15m ago</div>
+            </div>
+            <div class="inbox-row stagger-item">
+              <div><span class="risk-dot risk-dot--high"></span><span class="risk-num risk-num--high">88</span></div>
+              <div class="case-id">#4518</div>
+              <div class="user-name">Ellen Ripley</div>
+              <div><span class="badge badge--amber">Transfer</span></div>
+              <div class="amount">$24,000</div>
+              <div class="time">2h ago</div>
+            </div>
+            <div class="inbox-row stagger-item">
+              <div><span class="risk-dot risk-dot--high"></span><span class="risk-num risk-num--high">78</span></div>
+              <div class="case-id">#4521</div>
+              <div class="user-name">Alex Lemaire</div>
+              <div><span class="badge badge--amber">Transfer</span></div>
+              <div class="amount">$8,900</div>
+              <div class="time">12m ago</div>
+            </div>
+            <div class="inbox-row stagger-item">
+              <div><span class="risk-dot risk-dot--med"></span><span class="risk-num">65</span></div>
+              <div class="case-id">#4516</div>
+              <div class="user-name">James Bond</div>
+              <div><span class="badge badge--amber">Transfer</span></div>
+              <div class="amount">$3,200</div>
+              <div class="time">4h ago</div>
+            </div>
+            <div class="inbox-row stagger-item">
+              <div><span class="risk-dot risk-dot--med"></span><span class="risk-num">45</span></div>
+              <div class="case-id">#4519</div>
+              <div class="user-name">Jean Dujardin</div>
+              <div><span class="badge badge--amber">Payment</span></div>
+              <div class="amount">$450</div>
+              <div class="time">1h ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHASE 2: CASE DETAIL -->
+      <div class="phase-detail" id="detail-phase">
+        <div class="detail-header">
+          <div class="meta">
+            <span class="badge badge--amber">Suspicious Withdrawal</span>
+            <span style="font-size:var(--text-xs);font-family:var(--font-mono);color:var(--text-tertiary);">CASE #4520</span>
+            <span style="font-size:var(--text-xs);font-family:var(--font-mono);color:var(--text-tertiary);background:var(--bg-elevated);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">1 of 5 in queue</span>
+          </div>
+          <h1>Anomalous high-value withdrawal detected</h1>
+        </div>
+        <div class="detail-layout">
+          <div class="detail-left">
+            <!-- Risk Assessment -->
+            <div class="card">
+              <div class="card-header">Risk Assessment</div>
+              <div class="card-body">
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;">
+                  <div class="score-number">92<span class="score-suffix">/100</span></div>
+                  <span class="badge badge--red" style="opacity:0;animation:fadeIn 0.3s ease both;animation-delay:6.0s;">High Risk</span>
+                </div>
+                <div class="progress-bar" style="margin-bottom:20px;">
+                  <div class="progress-bar__fill"></div>
+                </div>
+                <!-- Comparison -->
+                <div class="comparison" style="margin-bottom:16px;">
+                  <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">
+                    <span>Normal behavior</span><span>This transaction</span>
+                  </div>
+                  <div class="comparison-row"><span class="comparison-row__label">Amount</span><span class="comparison-row__normal">$1,200</span><span class="comparison-row__arrow">&rarr;</span><span class="comparison-row__current comparison-row__current--anomaly">$12,450</span></div>
+                  <div class="comparison-row"><span class="comparison-row__label">Geo</span><span class="comparison-row__normal">San Francisco</span><span class="comparison-row__arrow">&rarr;</span><span class="comparison-row__current comparison-row__current--anomaly">Kyiv, UA</span></div>
+                  <div class="comparison-row"><span class="comparison-row__label">Device</span><span class="comparison-row__normal">MacBook Pro</span><span class="comparison-row__arrow">&rarr;</span><span class="comparison-row__current comparison-row__current--anomaly">Android</span></div>
+                </div>
+                <!-- Factors -->
+                <div style="font-size:var(--text-xs);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;opacity:0;animation:fadeIn 0.3s ease both;animation-delay:6.4s;">Contributing Factors</div>
+                <div class="factor-row"><div class="factor-row__label"><div class="factor-row__icon">&#9889;</div>Device Mismatch</div><div class="factor-row__value factor-row__value--high">+28</div></div>
+                <div class="factor-row"><div class="factor-row__label"><div class="factor-row__icon">&#127760;</div>IP Anomaly (VPN)</div><div class="factor-row__value factor-row__value--high">+26</div></div>
+                <div class="factor-row"><div class="factor-row__label"><div class="factor-row__icon">&#128200;</div>Amount Deviation</div><div class="factor-row__value factor-row__value--high">+22</div></div>
+                <div class="factor-row"><div class="factor-row__label"><div class="factor-row__icon">&#9889;</div>Session Velocity</div><div class="factor-row__value factor-row__value--med">+16</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="detail-right">
+            <!-- AI Insight -->
+            <div class="card" style="position:relative;overflow:hidden;">
+              <div style="position:absolute;top:-20px;right:-20px;font-size:100px;opacity:0.05;color:var(--purple);">&#9889;</div>
+              <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>AI Insight</span>
+                <span class="badge badge--purple">Beta</span>
+              </div>
+              <div class="card-body" style="position:relative;z-index:1;">
+                <div style="display:flex;gap:12px;">
+                  <div style="width:24px;height:24px;border-radius:var(--radius-md);background:var(--purple-light);border:1px solid rgba(168,85,247,0.2);display:flex;align-items:center;justify-content:center;color:var(--purple);font-size:12px;flex-shrink:0;margin-top:2px;">&#9889;</div>
+                  <div style="flex:1;">
+                    <!-- Scanning -->
+                    <div class="ai-scanning" style="display:flex;align-items:center;gap:8px;">
+                      <div style="display:flex;gap:3px;">
+                        <span style="width:5px;height:5px;border-radius:50%;background:var(--purple);animation:pulse 0.6s ease infinite;"></span>
+                        <span style="width:5px;height:5px;border-radius:50%;background:var(--purple);animation:pulse 0.6s ease infinite 0.15s;"></span>
+                        <span style="width:5px;height:5px;border-radius:50%;background:var(--purple);animation:pulse 0.6s ease infinite 0.3s;"></span>
+                      </div>
+                      <span style="font-family:var(--font-mono);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.08em;color:var(--purple);">Analyzing case data</span>
+                    </div>
+                    <!-- Streamed text -->
+                    <div class="ai-text ai-insight">
+                      <div class="line">Scanning device fingerprint... <span class="highlight-device">Device not recognized</span>. Last known device: <span class="highlight-device">MacBook Pro</span>, San Francisco.</div>
+                      <div class="line" style="margin-top:6px;">Current session originates from unregistered <span class="highlight-device">Android</span> device in <span class="highlight-geo">Kyiv, Ukraine</span>.</div>
+                      <div class="line" style="margin-top:6px;">Recommendation: <span class="highlight-action">immediate card freeze</span> and identity verification call.</div>
+                    </div>
+                    <!-- Confidence -->
+                    <div style="margin-top:16px;">
+                      <div class="confidence-pill">
+                        <span class="confidence-pill__dot confidence-pill__dot--high"></span>
+                        Confidence: <span style="color:var(--emerald);font-weight:500;">94%</span>
+                      </div>
+                      <span style="font-size:var(--text-xs);color:var(--text-tertiary);font-family:var(--font-mono);margin-left:12px;opacity:0;animation:fadeIn 0.3s ease both;animation-delay:10.8s;">Based on 7 similar cases</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- Action buttons -->
+                <div class="action-buttons" style="margin-top:20px;margin-left:36px;display:flex;gap:8px;">
+                  <div class="btn btn--danger">&#128274; Block Card</div>
+                  <div class="btn btn--secondary">&#8599; Escalate</div>
+                  <div class="btn btn--secondary">&#128065; Monitor Only</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cursor -->
+      <div class="cursor-ghost" style="top:300px;left:900px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M5.65 5.65l13.14 5.49-5.49 1.37-1.37 5.49z"/></svg>
+      </div>
+
+      <!-- Final fade to black -->
+      <div class="final-fade"></div>
+    </div>
+  </div>
+
+  <script>
+    // Highlight row at 3.5s
+    setTimeout(() => {
+      const rows = document.querySelectorAll('.inbox-row');
+      if (rows[0]) rows[0].classList.add('highlighted');
+    }, 3500);
+  </script>
+</body>
+</html>

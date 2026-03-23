@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared/design-tokens.css">
+  <link rel="stylesheet" href="shared/animations.css">
+  <link rel="stylesheet" href="shared/components.css">
+  <style>
+    /* ── TIMELINE ──
+       0.0s - 0.5s : Title fades in
+       0.5s - 1.5s : Step 1 (Transaction) lights up
+       1.5s - 2.5s : Connector 1 animates, Step 2 (Rule Engine) lights up
+       2.5s - 3.5s : Connector 2, Step 3 (Alert Queue)
+       3.5s - 5.0s : Connector 3, Step 4 (RiskOS) lights up with glow — main focus
+       5.0s - 6.0s : Inside RiskOS: "AI Insight" and "Human Decision" appear
+       6.0s - 7.5s : Connector 4, Step 5 (Action) with 3 branches
+       7.5s - 9.0s : Branches light up (Block, Escalate, Monitor)
+       9.0s - 10.0s: Hold
+      10.0s - 11.0s: Fade to black
+    */
+
+    .scene { flex-direction: column; align-items: center; justify-content: center; }
+
+    .flow-title {
+      font-size: 13px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-tertiary);
+      margin-bottom: 48px;
+      opacity: 0;
+      animation: fadeIn 0.4s ease both 0.2s;
+    }
+
+    .flow-container {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    /* Step node */
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+    }
+    .step-box {
+      padding: 16px 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      text-align: center;
+      min-width: 140px;
+      transition: all 0.5s var(--ease-out-expo);
+    }
+    .step.lit .step-box {
+      border-color: var(--border-strong);
+      background: var(--bg-elevated);
+    }
+    .step-icon {
+      font-size: 20px;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .step-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .step-sub {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    /* RiskOS special step */
+    .step--riskos .step-box {
+      min-width: 240px;
+      padding: 20px 28px;
+    }
+    .step--riskos.lit .step-box {
+      border-color: rgba(168,85,247,0.4);
+      box-shadow: 0 0 30px rgba(168,85,247,0.1);
+    }
+    .riskos-inner {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      opacity: 0;
+    }
+    .riskos-sub-node {
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      font-size: 10px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .riskos-sub-node .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+    }
+    .dot--purple { background: var(--purple); }
+    .dot--blue { background: #60a5fa; }
+
+    /* Connector arrow */
+    .connector {
+      width: 48px;
+      height: 2px;
+      background: var(--border-subtle);
+      position: relative;
+      opacity: 0;
+    }
+    .connector-fill {
+      position: absolute;
+      top: 0; left: 0;
+      height: 100%;
+      width: 0;
+      background: var(--text-tertiary);
+      transition: width 0.5s var(--ease-out-expo);
+    }
+    .connector.lit .connector-fill { width: 100%; }
+    .connector::after {
+      content: '';
+      position: absolute;
+      right: -4px;
+      top: -3px;
+      width: 0; height: 0;
+      border-left: 6px solid var(--text-tertiary);
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .connector.lit::after { opacity: 1; }
+
+    /* Action branches */
+    .branches {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      opacity: 0;
+    }
+    .branch {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      opacity: 0;
+      transition: all 0.4s var(--ease-out-expo);
+    }
+    .branch.lit { opacity: 1; }
+    .branch--block.lit { border-color: rgba(239,68,68,0.3); color: var(--red); }
+    .branch--escalate.lit { border-color: rgba(245,158,11,0.3); color: var(--amber); }
+    .branch--monitor.lit { border-color: rgba(16,185,129,0.3); color: var(--emerald); }
+    .branch-icon { font-size: 12px; }
+
+    .final-fade { position: absolute; inset: 0; background: var(--bg-base); opacity: 0; z-index: 50; animation: fadeIn 0.8s ease both 10.0s; }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <div class="flow-title">Transaction Detection Pipeline</div>
+
+    <div class="flow-container">
+      <!-- Step 1: Transaction -->
+      <div class="step" id="s1">
+        <div class="step-box">
+          <span class="step-icon">&#128179;</span>
+          <span class="step-name">Transaction</span>
+          <span class="step-sub">$12,450 withdrawal</span>
+        </div>
+      </div>
+      <div class="connector" id="c1"><div class="connector-fill"></div></div>
+
+      <!-- Step 2: Rule Engine -->
+      <div class="step" id="s2">
+        <div class="step-box">
+          <span class="step-icon">&#9881;</span>
+          <span class="step-name">Rule Engine</span>
+          <span class="step-sub">42 rules evaluated</span>
+        </div>
+      </div>
+      <div class="connector" id="c2"><div class="connector-fill"></div></div>
+
+      <!-- Step 3: Alert Queue -->
+      <div class="step" id="s3">
+        <div class="step-box">
+          <span class="step-icon">&#128276;</span>
+          <span class="step-name">Alert Queue</span>
+          <span class="step-sub">Risk score: 92</span>
+        </div>
+      </div>
+      <div class="connector" id="c3"><div class="connector-fill"></div></div>
+
+      <!-- Step 4: RiskOS -->
+      <div class="step step--riskos" id="s4">
+        <div class="step-box">
+          <span class="step-icon">&#9632;</span>
+          <span class="step-name" style="font-size:14px;">RiskOS</span>
+          <span class="step-sub">AI-augmented review</span>
+          <div class="riskos-inner" id="riskosInner">
+            <div class="riskos-sub-node"><span class="dot dot--purple"></span>AI Insight</div>
+            <div class="riskos-sub-node"><span class="dot dot--blue"></span>Human Decision</div>
+          </div>
+        </div>
+      </div>
+      <div class="connector" id="c4"><div class="connector-fill"></div></div>
+
+      <!-- Step 5: Action branches -->
+      <div class="branches" id="branches">
+        <div class="branch branch--block" id="b1"><span class="branch-icon">&#128274;</span> Block Card</div>
+        <div class="branch branch--escalate" id="b2"><span class="branch-icon">&#8599;</span> Escalate L2</div>
+        <div class="branch branch--monitor" id="b3"><span class="branch-icon">&#128065;</span> Monitor</div>
+      </div>
+    </div>
+
+    <div class="final-fade"></div>
+  </div>
+
+  <script>
+    const timeline = [
+      { t: 500,  fn: () => { show('s1'); } },
+      { t: 1500, fn: () => { light('c1'); show('s2'); } },
+      { t: 2500, fn: () => { light('c2'); show('s3'); } },
+      { t: 3500, fn: () => { light('c3'); show('s4'); } },
+      { t: 5000, fn: () => { document.getElementById('riskosInner').style.opacity = '1'; document.getElementById('riskosInner').style.animation = 'fadeSlideUp 0.4s var(--ease-out-expo) both'; } },
+      { t: 6000, fn: () => { light('c4'); document.getElementById('branches').style.opacity = '1'; document.getElementById('branches').style.animation = 'fadeIn 0.3s ease both'; } },
+      { t: 6500, fn: () => { document.getElementById('b1').classList.add('lit'); } },
+      { t: 7000, fn: () => { document.getElementById('b2').classList.add('lit'); } },
+      { t: 7500, fn: () => { document.getElementById('b3').classList.add('lit'); } },
+    ];
+
+    function show(id) {
+      const el = document.getElementById(id);
+      el.style.opacity = '1';
+      el.style.animation = 'scaleIn 0.4s var(--ease-out-expo) both';
+      el.classList.add('lit');
+    }
+    function light(id) {
+      const el = document.getElementById(id);
+      el.style.opacity = '1';
+      el.style.animation = 'fadeIn 0.2s ease both';
+      el.classList.add('lit');
+    }
+
+    timeline.forEach(({ t, fn }) => setTimeout(fn, t));
+  </script>
+</body>
+</html>
