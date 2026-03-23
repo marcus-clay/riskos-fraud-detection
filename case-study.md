@@ -1,71 +1,126 @@
-# RiskOS : détection de fraude augmentée par IA agentique
+# RiskOS
 
-## Le problème
+## Expérimentation UX agentiques · Détection de fraude
 
-Les équipes fraude des néobanques et établissements de paiement européens traitent en moyenne 80 % de faux positifs. Chaque alerte non qualifiée consomme du temps analyste, dégrade la réactivité sur les cas réels et augmente le risque de perte. Sous la réglementation PSD2, la détection doit se faire en temps réel, avec des équipes réduites (10 à 50 analystes) qui gèrent 80 à 150 alertes par shift.
+Victor Soussan · Product Design
+Catégorie : Expérimentation UX agentiques
+
+---
+
+## Pourquoi cette expérimentation
+
+Les interfaces agentiques posent une question de design qui n'a pas encore de réponse stabilisée : comment intégrer un agent IA dans un flux de décision humain sans créer de la dépendance, de la passivité ou de la méfiance ?
+
+Cette expérimentation explore cette question dans un contexte où les enjeux sont concrets et mesurables : la détection de fraude dans le secteur bancaire européen. Un terrain où chaque seconde de latence cognitive coûte de l'argent, où 80 % des alertes sont des faux positifs, et où l'analyste doit garder le contrôle de la décision finale.
+
+RiskOS est un prototype fonctionnel conçu pour tester des hypothèses de design sur la collaboration humain/IA dans un environnement de pression temporelle.
+
+---
+
+## L'insight fondateur
+
+Les analystes fraude des néobanques européennes traitent 80 à 150 alertes par shift de 8 heures. 80 % de ces alertes sont des faux positifs. Le temps perdu sur les faux positifs est du temps volé aux cas réels.
+
+L'outil actuel de la plupart des équipes : un tableau CSV, un terminal, des règles statiques. Aucune contextualisation, aucune priorisation intelligente, aucune mémoire de patterns.
+
+---
+
+`video:06-before-after.mp4`
+**Le gap entre l'existant et la proposition.**
+À gauche, le flux d'alertes tel qu'il arrive dans beaucoup d'établissements : un CSV brut, des colonnes de données sans hiérarchie visuelle. À droite, les mêmes données structurées dans RiskOS. Le comparatif rend tangible le coût cognitif de l'interface actuelle.
+
+---
 
 ## La question de design
 
 Comment concevoir une interface où l'IA qualifie et contextualise une alerte en temps réel, sans retirer à l'analyste le contrôle de la décision finale ?
 
-## Secteur et utilisateurs
+Trois principes guident le prototype :
+- L'IA prépare le terrain cognitif de l'analyste, elle ne décide pas à sa place.
+- Le raisonnement de l'agent doit être visible, pas seulement sa conclusion.
+- Chaque action doit avoir des conséquences traçables dans l'écosystème réel.
 
-**Secteur** : néobanques et établissements de paiement (Revolut, N26, Qonto, Lydia, Stripe issuing). Stack technique moderne (API-first), obligation réglementaire PSD2/DSP2 de détection en temps réel.
+---
 
-**Utilisateur principal** : l'analyste fraude niveau 1 (L1). Premier filtre du flux d'alertes. Travaille sur poste fixe, 2 à 3 écrans, traite 80 à 150 alertes par shift de 8h. Temps de réponse attendu : moins de 60 secondes par alerte.
+`video:07-data-flow.mp4`
+**Où se positionne RiskOS dans la chaîne de détection.**
+Le parcours d'une transaction suspecte : du core banking au moteur de règles, de la file d'alertes à l'analyse IA, jusqu'à la décision humaine. RiskOS intervient au moment où l'alerte a besoin d'un jugement, pas d'une règle supplémentaire.
 
-**Utilisateur secondaire** : l'analyste fraude niveau 2 (L2). Reçoit les escalades du L1, mène les investigations approfondies, contacte le client. Travaille sur 10 à 20 cas par jour.
+---
 
-**Types de fraude couverts** :
-- **Account takeover (ATO)** : un tiers accède au compte d'un client via credentials volées ou SIM swap. Signaux : device inconnu, géolocalisation incohérente, IP VPN, vélocité anormale.
-- **Card-not-present (CNP)** : transaction en ligne avec des données de carte volées. Signaux : montant inhabituel, nouveau bénéficiaire, merchant category atypique.
-- **Authorized push payment (APP)** : le client est manipulé par ingénierie sociale pour envoyer de l'argent. Signaux : virement élevé vers un compte récent, pattern horaire inhabituel.
+## Le triage : prioriser sous pression
 
-## Ce que fait RiskOS
+L'analyste L1 ouvre son shift. L'inbox affiche 5 cas ouverts, triés par risque. Le filtrage par niveau (high, medium, low) permet de concentrer l'attention sur les cas critiques. Le compteur de session rappelle ce qui a été traité et ce qui reste.
 
-Un outil de détection et de gestion de cas en temps réel pour les analystes fraude L1. L'interface couvre le cycle complet d'une alerte : scoring composite multivarié (vélocité, device, géolocalisation, montant), investigation contextuelle, prise de décision, résolution.
+`video:01-hero-triage.mp4`
+**Frustration :** l'analyste perd du temps à scanner une liste non priorisée pour identifier les cas urgents.
+**Bénéfice :** le codage couleur, le filtre par risque et le compteur dynamique réduisent le temps de triage à quelques secondes.
 
-## Fonctionnalités structurantes
+---
 
-- **Inbox avec triage actif** : vue liste filtrable par niveau de risque (high, medium, low) avec recherche textuelle et compteur dynamique. Le filtre persiste entre les navigations pour préserver le contexte de travail de l'analyste. Barre de session visible (cas traités, bloqués, escaladés, temps moyen).
-- **Fiche cas sur un seul écran** : profil client avec statut KYC, timeline transactionnelle horodatée, scoring de risque avec facteurs contributifs détaillés, et comparatif comportemental (comportement normal du client vs. transaction suspecte) pour rendre l'anomalie immédiatement lisible.
-- **Insight IA en streaming** : l'analyse apparaît en temps réel avec coloration sémantique des tokens (montants en amber, géolocalisations en rouge, devices en jaune, recommandations en blanc). Un indicateur de confiance (pourcentage + nombre de cas similaires) se révèle après l'analyse, accompagné d'un signal sonore. Les boutons d'action n'apparaissent qu'après que l'IA a terminé son analyse. Un bouton « Ask for more context » permet de demander des insights complémentaires.
-- **Flux d'action complet** : blocage carte, escalade niveau 2 (avec note pré-remplie par l'IA), monitoring. Chaque action déclenche une vue de confirmation avec récapitulatif (cas, utilisateur, action, durée de review), export PDF, notification Slack simulée vers #fraud-ops, et ticket de suivi.
-- **Traitement en queue** : l'analyste peut enchaîner les cas directement depuis la vue de confirmation (« Next in queue »). Un écran de fin de queue affiche les métriques de session (cas traités, temps total, moyenne par cas).
-- **Connexions simulées** : sources de données connectées (Core Banking API, Device Fingerprint, Geo Intelligence) avec indicateur de latence, preview Slack du message envoyé à l'équipe, notification SMS simulée au client, lien CRM.
+## L'analyse IA : rendre le raisonnement visible
 
-## La réflexion sur les interfaces agentiques
+L'agent IA analyse le cas en temps réel. Le texte apparaît mot par mot : pattern matching, analyse comportementale, recommandation. Les tokens sensibles (montants, géolocalisations, devices) se colorent pour guider l'attention. Un indicateur de confiance quantifie la certitude de l'analyse. Les sources de données (Core Banking API, Device Fingerprint, Geo Intelligence) s'allument pour montrer d'où vient l'intelligence.
 
-Le prototype explore un modèle d'interaction où l'agent IA n'automatise pas la décision, il prépare le terrain cognitif de l'analyste. Quatre choix de design matérialisent cette posture :
+Les boutons d'action n'apparaissent qu'après le streaming complet. Ce choix de design impose un temps de lecture minimum et empêche la décision réflexe.
 
-1. **Le streaming rend le raisonnement visible.** L'insight se construit sous les yeux de l'analyste, qui peut commencer à évaluer avant la fin de l'analyse. Les tokens sensibles (montants, lieux, devices) se colorent après le streaming pour guider l'attention.
-2. **Les actions sont conditionnées à l'analyse.** Les boutons de décision n'apparaissent qu'après le streaming complet, imposant un temps de lecture minimum et empêchant la décision réflexe.
-3. **Le feedback sensoriel marque la transition.** Le son à l'apparition de l'indicateur de confiance signale que l'IA a terminé son travail et que l'autorité passe à l'humain.
-4. **Les ellipses montrent l'impact.** L'action de l'analyste ne reste pas dans l'outil : la notification Slack, le SMS client, le ticket de suivi rendent visibles les conséquences de la décision dans l'écosystème réel.
+`video:02-ai-insight.mp4`
+**Frustration :** l'analyste reçoit un score de risque sans comprendre pourquoi. Il doit reconstruire mentalement le raisonnement à partir de données éparses.
+**Bénéfice :** l'IA structure les signaux faibles en une lecture narrative. L'analyste comprend le « pourquoi » avant de décider le « quoi ».
 
-## Screencasts
+---
 
-### 01 : Triage (16s)
-L'analyste L1 ouvre son shift. L'inbox affiche 5 cas ouverts, triés par risque. Il filtre sur « High Risk », sélectionne le cas le plus critique (Sarah Connor, risk 92, withdrawal $12,450), et bascule sur la vue détaillée avec le scoring, les facteurs contributifs et le comparatif comportemental.
+## La décision : agir et voir l'impact
 
-### 02 : AI Insight (15s)
-L'agent IA analyse le cas en temps réel. Le texte apparaît mot par mot : « Device not recognized. Last known device: MacBook Pro, San Francisco. Current session originates from unregistered Android device in Kyiv, Ukraine. » Les tokens sensibles se colorent (device en jaune, géolocalisation en rouge). L'indicateur de confiance (94 %, 7 cas similaires) apparaît avec un signal sonore. Les sources de données (Core Banking API, Device Fingerprint, Geo Intelligence) s'allument séquentiellement pour montrer d'où vient l'analyse.
+L'analyste choisit une action (bloquer, escalader, monitorer). La confirmation récapitule le cas, l'action et la durée de review. Deux ellipses montrent que l'action ne reste pas dans l'outil : le message Slack envoyé à l'équipe #fraud-ops, et le SMS reçu par le client dont la carte a été gelée.
 
-### 03 : Décision et ellipses (15s)
-L'analyste clique « Block Card ». La vue de confirmation apparaît avec le récapitulatif (cas #4520, Sarah Connor, action Block, reviewé en 23s). L'export PDF se génère (spinner > checkmark). Deux ellipses montrent l'impact hors de l'outil : le message Slack envoyé à #fraud-ops (« Account Frozen, Case #4520, Risk 92/100 ») et le SMS reçu par la cliente (« Your card ending in **4520 has been temporarily frozen due to unusual activity »). Le prochain cas en queue s'affiche.
+L'escalade vers le niveau 2 inclut une note pré-remplie par l'IA, que l'analyste peut éditer avant de transmettre. L'escalade devient un acte de transmission, pas un abandon.
 
-### 04 : Queue processing (14s)
-L'analyste enchaîne 5 cas en séquence rapide. Chaque cas passe par la boucle confirmation > next in queue. La barre de session se met à jour en temps réel (blocked, escalated, safe). Au dernier cas, l'écran « Queue cleared » affiche les métriques animées : 5 cas reviewés, 92s au total, 18s de moyenne par cas.
+`video:03-decision-ellipses.mp4`
+**Frustration :** l'analyste agit dans l'outil mais ne voit jamais la conséquence de sa décision. L'escalade part dans le vide.
+**Bénéfice :** chaque action a un écho visible dans l'écosystème (Slack, SMS, ticket). L'analyste sait que sa décision a été transmise, reçue et exécutée.
 
-### 05 : Le faux positif (à produire)
-Le cas Jean Dujardin (risk 45, payment $450). L'insight IA conclut « mark as safe, no action required ». L'analyste confirme en un clic. Le cas est résolu en moins de 10 secondes. Montre que l'outil doit être aussi rapide à disqualifier les faux positifs qu'à traiter les cas réels.
+---
 
-### 06 : Avant/après (à produire)
-Écran split : à gauche, un tableau de données brut (terminal ou Excel) représentant le workflow actuel de nombreux établissements. À droite, l'interface RiskOS avec les mêmes données, structurées visuellement. Le contraste rend le gap tangible.
+## Le faux positif : aussi rapide à disqualifier qu'à traiter
 
-### 07 : Le flux de données (à produire)
-Schéma animé du parcours d'une transaction suspecte : Transaction > Rule Engine > Alert Queue > RiskOS (AI Insight + Human Decision) > Action (Block/Escalate/Monitor). Chaque étape s'illumine séquentiellement. Contextualise RiskOS dans l'architecture d'un système de détection.
+Un cas à risque moyen (score 45, payment de 450 euros). L'IA conclut : « Transaction within acceptable range. Consistent patterns. Mark as safe. » L'analyste confirme en un clic. Le cas est résolu en 8 secondes.
 
-## Stack et périmètre
+`video:05-false-positive.mp4`
+**Frustration :** les faux positifs consomment autant de temps que les cas réels, alors qu'ils ne nécessitent aucune action.
+**Bénéfice :** l'IA qualifie les faux positifs en quelques secondes, libérant l'attention de l'analyste pour les cas qui comptent.
 
-Prototype fonctionnel. React 18, Vite, Tailwind CSS, lucide-react. Dark mode, desktop-first. Web Audio API pour le feedback sonore. Vidéos produites via Puppeteer + FFmpeg (capture frame-par-frame, H.264, 1920x1080, 30 fps).
+---
+
+## Le traitement en queue : enchaîner sans friction
+
+L'analyste traite 5 cas en séquence. Chaque confirmation propose directement le cas suivant. La barre de session se met à jour en temps réel. Au dernier cas, un écran récapitule la session : 5 cas traités, 92 secondes au total, 18 secondes de moyenne par cas.
+
+`video:04-queue-cleared.mp4`
+**Frustration :** chaque changement de cas impose un cold start cognitif. L'analyste perd le rythme entre les dossiers.
+**Bénéfice :** le chaînage direct et les métriques de session maintiennent le flux de travail et rendent la productivité visible.
+
+---
+
+## Ce que cette expérimentation m'a appris
+
+L'intégration de l'IA dans un flux de décision humain ne se résout pas par l'automatisation. Le problème de design est plus fin : il s'agit de distribuer l'autorité entre l'agent et l'humain à chaque étape du processus.
+
+Trois mécanismes se sont révélés structurants dans cette expérimentation :
+
+**Le streaming comme outil de confiance.** Quand l'IA montre son raisonnement en temps réel, l'analyste peut commencer à évaluer avant la fin de l'analyse. La transparence du processus construit la confiance plus efficacement qu'un score de confiance affiché après coup.
+
+**Le conditionnement des actions.** Retarder l'apparition des boutons de décision jusqu'à la fin de l'analyse IA impose un temps de lecture minimum. Dans un contexte de pression temporelle, ce frein intentionnel protège contre la décision réflexe sans ralentir significativement le workflow.
+
+**Les ellipses comme preuve d'impact.** Montrer la notification Slack, le SMS client, le ticket de suivi après une action transforme l'outil d'un silo en un nœud d'un réseau. L'analyste voit que sa décision a des conséquences, ce qui renforce la responsabilité et la satisfaction du travail accompli.
+
+Ces mécanismes sont transposables à d'autres contextes B2B où l'IA assiste une décision humaine : conformité réglementaire, triage médical, modération de contenu, gestion d'incidents.
+
+---
+
+## Périmètre technique
+
+Prototype fonctionnel. React 18, Vite, Tailwind CSS, lucide-react. Dark mode, desktop-first. Web Audio API pour le feedback sonore. Déployé sur Vercel.
+
+`link:prototype` https://riskos-gulcbxw52-hugos-projects-0ac0cf31.vercel.app
+`link:github` https://github.com/marcus-clay/riskos-fraud-detection
