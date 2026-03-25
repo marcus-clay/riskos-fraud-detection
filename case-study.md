@@ -7,6 +7,11 @@ Catégorie : Expérimentation UX agentiques
 
 ---
 
+`image:hero`
+![RiskOS hero](public/images/thubmnail_riskos_dark.webp)
+
+---
+
 ## Intention et cadre de l'expérimentation
 
 Les interfaces agentiques posent une question de design qui n'a pas encore de réponse stabilisée : comment intégrer un agent IA dans un flux de décision humain sans créer de la dépendance, de la passivité ou de la méfiance ?
